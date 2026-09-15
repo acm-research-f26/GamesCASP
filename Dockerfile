@@ -2,7 +2,6 @@ FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Basic dependencies
 RUN apt-get update && apt-get install -y \
     curl \
     git \
@@ -11,26 +10,24 @@ RUN apt-get update && apt-get install -y \
     python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Ciao Prolog
-RUN curl https://ciao-lang.org/boot -sSfL | sh
+# Install Ciao
+RUN curl https://ciao-lang.org/boot -sSfL | sh -s -- --prebuilt-bin local-install
 
-# Make Ciao available
-ENV PATH="/root/.ciao/bin:${PATH}"
+ENV CIAOROOT=/root/.ciaoroot/v1.25.0-m1
+ENV PATH="/root/.ciaoroot/v1.25.0-m1/build/bin:${PATH}"
 
 # Install s(CASP)
-RUN ciao get gitlab.software.imdea.org/ciao-lang/sCASP
+RUN eval "$(${CIAOROOT}/build/bin/ciao-env --sh)" && \
+    ciao get gitlab.software.imdea.org/ciao-lang/sCASP
+
+# Make Ciao environment available at runtime
+ENV PATH="/root/.ciao/build/bin:/root/.ciaoroot/v1.25.0-m1/build/bin:${PATH}"
 
 WORKDIR /app
 
-# Python dependencies
-COPY requirements.txt .
-
+COPY Server/requirements.txt .
 RUN pip3 install --break-system-packages -r requirements.txt
 
-# Copy server
 COPY Server/ .
 
-# Expose WebSocket server
 EXPOSE 6767
-
-CMD ["python3", "server.py"]

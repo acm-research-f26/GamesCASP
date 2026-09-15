@@ -5,6 +5,6 @@ services:
     ports:
       - "6767:6767"
     volumes:
-      - ./server:/app
+      - ./Server:/app
     stdin_open: true
     tty: true
