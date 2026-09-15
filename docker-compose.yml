@@ -1,0 +1,10 @@
+services:
+  gamescasp:
+    build: .
+    container_name: gamescasp
+    ports:
+      - "6767:6767"
+    volumes:
+      - ./server:/app
+    stdin_open: true
+    tty: true
