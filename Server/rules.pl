@@ -1,3 +1,4 @@
+:- use_module(library(scasp)).
 :- consult('facts_temp.pl').
 
 true_length([], 0).
