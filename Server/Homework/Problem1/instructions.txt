@@ -1,0 +1,3 @@
+In order to verify the queries,
+run scasp -i  on both the rules and 
+facts files.
