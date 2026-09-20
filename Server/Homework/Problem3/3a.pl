@@ -3,3 +3,4 @@ age(bob, 10).
 
 
 adult(X) :- age(X, N), N >= 18.
+:- adult(X), grade(X, kindergarten).
