@@ -1,0 +1,5 @@
+?- reachable(vault).
+?- opens(door3).
+?- reachable(treasure).
+?- -safe(D).
+?- -safe(door2).
