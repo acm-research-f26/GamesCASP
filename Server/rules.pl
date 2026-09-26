@@ -1,5 +1,4 @@
-:- use_module(library(scasp)).
-:- consult('facts_temp.pl').
+#include('facts_temp.pl').
 
 true_length([], 0).
 true_length([_|T], N) :- true_length(T, N0), N is N0 + 1.

@@ -20,18 +20,9 @@ if SCASP is None:
 print(f"s(CASP): {SCASP}")
 print(f"Prolog file: {rules_file}")
 
-def run_scasp(query: str):
-    query_file = os.path.join(current_dir, "run_temp.pl")
-    with open(rules_file) as rules_src, \
-         open(facts_temp_file) as facts_src, \
-         open(query_file, "w") as dst:
-        dst.write(rules_src.read())
-        dst.write("\n")
-        dst.write(facts_src.read())
-        dst.write(f"\n?- {query}.\n")
-
+def run_scasp():
     result = subprocess.run(
-        ["scasp", "-s0", query_file],
+        ["scasp", "-s1", "mainQuery.pl"],
         capture_output=True,
         text=True,
         timeout=30
@@ -39,23 +30,6 @@ def run_scasp(query: str):
     if result.returncode != 0:
         raise RuntimeError(f"scasp failed: {result.stderr}")
     return result.stdout
-
-def parse_scasp_output(output: str):
-    """Parse Ciao scasp -s0 text output into a list of {var: value} binding dicts."""
-    solutions = []
-    blocks = re.split(r'\n\s*ANSWER:', output)
-    for block in blocks[1:]:
-        bindings = {}
-        bindings_match = re.search(r'BINDINGS:\s*\n(.*?)(?:\n\s*\n|\Z)', block, re.DOTALL)
-        if bindings_match:
-            for line in bindings_match.group(1).strip().splitlines():
-                line = line.strip()
-                if not line or "=" not in line:
-                    continue
-                var, val = line.split("=", 1)
-                bindings[var.strip()] = val.strip()
-        solutions.append(bindings)
-    return solutions
 
 async def handler(socket):
     shutil.copy(f"{current_dir}/facts.pl", f"{current_dir}/facts_temp.pl")
@@ -87,7 +61,9 @@ async def handler(socket):
                     factsFile.flush()  # make sure facts are on disk before scasp reads them
 
                     startTime = time.time()
-                    rawOutput = run_scasp("chosen_action(X)")
+
+                    rawOutput = run_scasp()
+                    
                     endTime = time.time()
 
                     rtt = 0.95 * rtt + 0.05 * (endTime - startTime)
@@ -96,12 +72,14 @@ async def handler(socket):
                     print("raw scasp output:")
                     print(rawOutput)
 
-                    solutions = parse_scasp_output(rawOutput)
-                    solutionArr = [sol["X"] for sol in solutions if "X" in sol]
+                    parsedOutput = rawOutput.split("X = ")[1].strip()
+
+                    print("parsed scasp output:")
+                    print(rawOutput)
 
                     dataToSendBack = {
                         "message_type": "possible_actions",
-                        "possible_actions": solutionArr
+                        "possible_actions": [parsedOutput]
                     }
                     print(f"data being sent back is: {dataToSendBack}")
                     await socket.send(json.dumps(dataToSendBack))
