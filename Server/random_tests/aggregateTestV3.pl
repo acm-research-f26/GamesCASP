@@ -1,86 +1,74 @@
-% ============================================================
-% Base priority for each action
-% ============================================================
+:- use_module(library(scasp)).
+
 base_priority(attack, 50).
 base_priority(flee, 40).
 base_priority(wander, 10).
 
-
-% ============================================================
-% Domain of actions (the only addition required for grounding)
-% ============================================================
 action(attack).
 action(flee).
 action(wander).
 
-
-% ============================================================
-% Conditions
-% ============================================================
 enemy_nearby(player).
 enemy_low_health(player).
 low_health(player).
 
+% ---- fixed set of modifier "slots" (grounds the *sum*, not just the action) ----
+condition_key(enemy_nearby_bonus).
+condition_key(low_hp_enemy_bonus).
+condition_key(self_low_hp_penalty).
+condition_key(self_low_hp_bonus).
+condition_key(no_enemy_bonus).
 
-% ============================================================
-% Priority modifiers
-% ============================================================
-modifier(Actor, attack, 10) :-
-    enemy_nearby(Actor).
+contributes(Actor, attack, enemy_nearby_bonus, 10) :- enemy_nearby(Actor).
+contributes(Actor, attack, enemy_nearby_bonus, 0)  :- not enemy_nearby(Actor).
 
-modifier(Actor, attack, 5) :-
-    enemy_low_health(Actor).
+contributes(Actor, attack, low_hp_enemy_bonus, 5)  :- enemy_low_health(Actor).
+contributes(Actor, attack, low_hp_enemy_bonus, 0)  :- not enemy_low_health(Actor).
 
-modifier(Actor, attack, -20) :-
-    low_health(Actor).
+contributes(Actor, attack, self_low_hp_penalty, -20) :- low_health(Actor).
+contributes(Actor, attack, self_low_hp_penalty, 0)   :- not low_health(Actor).
 
-modifier(Actor, flee, 50) :-
-    low_health(Actor).
+contributes(Actor, flee, self_low_hp_bonus, 50) :- low_health(Actor).
+contributes(Actor, flee, self_low_hp_bonus, 0)  :- not low_health(Actor).
 
-modifier(Actor, wander, 10) :-
-    not enemy_nearby(Actor).
+contributes(Actor, wander, no_enemy_bonus, 10) :- not enemy_nearby(Actor).
+contributes(Actor, wander, no_enemy_bonus, 0)  :- enemy_nearby(Actor).
 
+contributes(Actor, Action, Key, 0) :-
+    condition_key(Key),
+    action(Action),
+    not has_specific_contribution(Actor, Action, Key).
 
-% ============================================================
-% Sum a list of numbers
-% ============================================================
-sum_list([], 0).
+has_specific_contribution(Actor, Action, Key) :-
+    contributes(Actor, Action, Key, _).
 
-sum_list([H|T], Sum) :-
-    sum_list(T, Rest),
-    Sum is H + Rest.
+all_condition_keys([enemy_nearby_bonus, low_hp_enemy_bonus,
+                     self_low_hp_penalty, self_low_hp_bonus,
+                     no_enemy_bonus]).
 
+sum_over_keys(_, _, [], 0).
+sum_over_keys(Actor, Action, [K|Ks], Total) :-
+    contributes(Actor, Action, K, V),
+    sum_over_keys(Actor, Action, Ks, Rest),
+    Total is V + Rest.
 
-% ============================================================
-% Calculate final priority
-% ============================================================
-priority(Actor, Action, Priority) :-
+% ---- priority/3: no findall anywhere in its definition ----
+priority(Actor, Action, P) :-
+    action(Action),
     base_priority(Action, Base),
-    findall(
-        Modifier,
-        modifier(Actor, Action, Modifier),
-        Modifiers
-    ),
-    sum_list(Modifiers, TotalModifier),
-    Priority is Base + TotalModifier.
+    all_condition_keys(Keys),
+    sum_over_keys(Actor, Action, Keys, Sum),
+    P is Base + Sum.
 
-
-% ============================================================
-% Dominated / good action  (now safely grounded)
-% ============================================================
 dominated(Actor, Action, Priority) :-
-    action(OtherAction),                % ground the competitor
+    action(OtherAction),
     OtherAction \= Action,
     priority(Actor, OtherAction, OtherPriority),
     OtherPriority > Priority.
 
 good_action(Actor, Action) :-
-    action(Action),                     % ground Action first
+    action(Action),
     priority(Actor, Action, Priority),
     not dominated(Actor, Action, Priority).
 
-
-% ------------------------------------------------------------
-% QUERY
-% ------------------------------------------------------------
 ?- good_action(player, Action).
