@@ -1,24 +1,23 @@
 :- use_module(library(scasp)).
 
-base_priority(attack, 50).
-base_priority(flee, 40).
-base_priority(wander, 10).
-
 action(attack).
 action(flee).
 action(wander).
+
+base_priority(attack, 50).
+base_priority(flee, 40).
+base_priority(wander, 10).
 
 enemy_nearby(player).
 enemy_low_health(player).
 low_health(player).
 
-% ---- fixed set of modifier "slots" (grounds the *sum*, not just the action) ----
-condition_key(enemy_nearby_bonus).
-condition_key(low_hp_enemy_bonus).
-condition_key(self_low_hp_penalty).
-condition_key(self_low_hp_bonus).
-condition_key(no_enemy_bonus).
+% ---- which keys actually matter to each action (fact, not negation) ----
+relevant_keys(attack, [enemy_nearby_bonus, low_hp_enemy_bonus, self_low_hp_penalty]).
+relevant_keys(flee,   [self_low_hp_bonus]).
+relevant_keys(wander, [no_enemy_bonus]).
 
+% ---- contributions: only ever defined for relevant pairs, no fallback ----
 contributes(Actor, attack, enemy_nearby_bonus, 10) :- enemy_nearby(Actor).
 contributes(Actor, attack, enemy_nearby_bonus, 0)  :- not enemy_nearby(Actor).
 
@@ -34,29 +33,17 @@ contributes(Actor, flee, self_low_hp_bonus, 0)  :- not low_health(Actor).
 contributes(Actor, wander, no_enemy_bonus, 10) :- not enemy_nearby(Actor).
 contributes(Actor, wander, no_enemy_bonus, 0)  :- enemy_nearby(Actor).
 
-contributes(Actor, Action, Key, 0) :-
-    condition_key(Key),
-    action(Action),
-    not has_specific_contribution(Actor, Action, Key).
-
-has_specific_contribution(Actor, Action, Key) :-
-    contributes(Actor, Action, Key, _).
-
-all_condition_keys([enemy_nearby_bonus, low_hp_enemy_bonus,
-                     self_low_hp_penalty, self_low_hp_bonus,
-                     no_enemy_bonus]).
-
+% ---- sum only over the keys relevant to THIS action ----
 sum_over_keys(_, _, [], 0).
 sum_over_keys(Actor, Action, [K|Ks], Total) :-
     contributes(Actor, Action, K, V),
     sum_over_keys(Actor, Action, Ks, Rest),
     Total is V + Rest.
 
-% ---- priority/3: no findall anywhere in its definition ----
 priority(Actor, Action, P) :-
     action(Action),
     base_priority(Action, Base),
-    all_condition_keys(Keys),
+    relevant_keys(Action, Keys),
     sum_over_keys(Actor, Action, Keys, Sum),
     P is Base + Sum.
 
