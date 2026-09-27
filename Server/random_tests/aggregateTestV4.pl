@@ -1,5 +1,10 @@
 :- use_module(library(scasp)).
 
+% Explicit domain of actions
+action(attack).
+action(flee).
+action(wander).
+
 % Base priority for each action
 base_priority(attack, 50).
 base_priority(flee, 40).
@@ -31,16 +36,19 @@ priority(Actor, Action, Priority) :-
     Priority is Base + TotalModifier.
 
 % Helper: is OtherAction NOT a counterexample to Action being good?
-% (i.e. either it's the same action, or it doesn't beat Action's priority)
-not_worse(Action, Priority, OtherAction) :-
-    OtherAction = Action.
-not_worse(Action, Priority, OtherAction) :-
+not_worse(Actor, Action, Priority, OtherAction) :-
+    not action(OtherAction).            % irrelevant binding: vacuously fine
+not_worse(Actor, Action, Priority, OtherAction) :-
+    action(OtherAction),
+    OtherAction = Action.                % same action: fine
+not_worse(Actor, Action, Priority, OtherAction) :-
+    action(OtherAction),
     OtherAction \= Action,
-    priority(_, OtherAction, OtherPriority),
-    OtherPriority =< Priority.
+    priority(Actor, OtherAction, OtherPriority),
+    OtherPriority =< Priority.            % different action: must not beat us
 
 good_action(Actor, Action) :-
     priority(Actor, Action, Priority),
-    forall(OtherAction, not_worse(Action, Priority, OtherAction)).
+    forall(OtherAction, not_worse(Actor, Action, Priority, OtherAction)).
 
 ?- good_action(player, Action).
