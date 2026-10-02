@@ -9,6 +9,7 @@ import time
 from typing import Any
 
 from FactFactory import FactFactory
+import UnityRequest as ur
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -63,24 +64,28 @@ def copy_facts_files_from(current_dir):
 async def handler(socket):
     copy_facts_files_from(current_dir)
 
-    with open(facts_temp_file, "a") as temp_facts_file:
+    with open(facts_temp_file, "a") as temp_facts_file, open(rules_file, "a") as facts_file:
         try:
             async for message in socket:
                 jsonMessage = json.loads(message)
 
-                # we need some sort of isFact(x)
-                fact = FactFactory.generate_fact_from_json(jsonMessage)
-                temp_facts_file.write(fact)
-                temp_facts_file.flush()
+                unity_request_ctx = (ur.UnityRequestContext()
+                    .add("json_message", jsonMessage)
+                    .add("temp_facts_file", temp_facts_file)
+                    .add("facts_file", facts_file)
+                    .add("socket", socket)
+                ).build()
 
-                # we need some sort of isGetAction(x)
-                if jsonMessage['message_type'] == 'get_action':
-                    raw_output = query_scasp()
-                    clean_output = parse_output(raw_output)
-                    await socket.send(jsonize_parsed_output(clean_output))  
+                unity_request = None
 
-                # maybe we should have a PythonRequest interface  
-                                
+                if jsonMessage['request_type'] == 'fact':
+                    unity_request = ur.UnityTempFactRequest(unity_request_ctx)
+                elif jsonMessage['request_type'] == 'get_action':
+                    unity_request = ur.UnityActionRequest(unity_request_ctx)
+
+                if unity_request:
+                    await unity_request.process()        
+
         except websockets.ConnectionClosed:
             print("Client disconnected")
 

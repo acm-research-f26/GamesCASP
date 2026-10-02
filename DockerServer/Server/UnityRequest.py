@@ -59,7 +59,7 @@ class UnityActionRequest(UnityRequest):
 
         return json.dumps(dataToSendBack)
         
-class UnityFactRequest(UnityRequest):
+class UnityTempFactRequest(UnityRequest):
     async def process(self):
         fact = FactFactory.generate_fact_from_json(self.ctx["json_message"])
         temp_file = self.ctx["temp_facts_file"]
