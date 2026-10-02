@@ -6,6 +6,7 @@ import asyncio
 import shutil
 import websockets
 import time
+from typing import Any
 
 from FactFactory import FactFactory
 
@@ -22,7 +23,7 @@ if SCASP is None:
 print(f"s(CASP): {SCASP}")
 print(f"Prolog file: {rules_file}")
 
-def run_scasp():
+def query_scasp():
     result = subprocess.run(
         ["scasp", "-s1", "mainQuery.pl"],
         capture_output=True,
@@ -33,49 +34,46 @@ def run_scasp():
         raise RuntimeError(f"scasp failed: {result.stderr}")
     return result.stdout
 
-async def handler(socket):
+def delta_time_and_output_of_function(f):
+    startTime = time.time()
+    rawOutput = f()
+    endTime = time.time()
+
+    return (endTime - startTime, rawOutput)
+
+def parse_output(raw_output):
+    return raw_output.split("X = ")[1].strip()
+
+def jsonize_parsed_output(parsed_output):
+        dataToSendBack = {
+            "message_type": "possible_actions",
+            "possible_actions": [parsed_output]
+        }
+
+        return json.dumps(dataToSendBack)
+
+def copy_facts_files_from(current_dir):
     shutil.copy(f"{current_dir}/facts.pl", f"{current_dir}/facts_temp.pl")
 
-    rtt = 0
-    with open(facts_temp_file, "a") as factsFile:
-        try:
-            async for message in socket:
-                jsonMessage = json.loads(message)
-                if (jsonMessage["message_type"] == "get_action"):
-                    factsFile.flush()  # is this necessary, nothing written b4hand?
+async def handler(socket):
+    copy_facts_files_from(current_dir)
+    factsFile = open(facts_temp_file, "a") # does this open the OG or the copy?
 
-                    startTime = time.time()
+    try:
+        async for message in socket:
+            jsonMessage = json.loads(message)
 
-                    rawOutput = run_scasp()
-                    
-                    endTime = time.time()
-
-                    rtt = 0.95 * rtt + 0.05 * (endTime - startTime)
-                    print(f"current rtt here is {rtt}")
-
-                    print("raw scasp output:")
-                    print(rawOutput)
-
-                    # what if the incoming query doesn't the variable X?
-                    parsedOutput = rawOutput.split("X = ")[1].strip()
-
-                    print("parsed scasp output:")
-                    print(rawOutput)
-
-                    dataToSendBack = {
-                        "message_type": "possible_actions",
-                        "possible_actions": [parsedOutput]
-                    }
-                    print(f"data being sent back is: {dataToSendBack}")
-                    await socket.send(json.dumps(dataToSendBack))
-                else:
-                    fact = FactFactory.generate_fact_from_json(jsonMessage)
-                    factsFile.write(fact)
-                
+            if jsonMessage["message_type"] == "get_action":
+                raw_output = query_scasp()
+                clean_output = parse_output(raw_output)
+                await socket.send(jsonize_parsed_output(clean_output))
+            else:
+                fact = FactFactory.generate_fact_from_json(jsonMessage)
+                factsFile.write(fact)
                 factsFile.flush()
-                
-        except websockets.ConnectionClosed:
-            print("Client disconnected")
+            
+    except websockets.ConnectionClosed:
+        print("Client disconnected")
 
 async def mainTask():
     async with websockets.serve(handler, "0.0.0.0", 6767):
