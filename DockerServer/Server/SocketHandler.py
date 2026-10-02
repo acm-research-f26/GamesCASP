@@ -55,24 +55,32 @@ def jsonize_parsed_output(parsed_output):
 def copy_facts_files_from(current_dir):
     shutil.copy(f"{current_dir}/facts.pl", f"{current_dir}/facts_temp.pl")
 
+
+# should only get called after unity time interval, explicit get_action
+# OR on a critical game event (e.g. player hits another)
+
+# Sockets should not be called every frame
 async def handler(socket):
     copy_facts_files_from(current_dir)
 
-    with open(facts_temp_file, "a") as factsFile:
+    with open(facts_temp_file, "a") as temp_facts_file:
         try:
             async for message in socket:
                 jsonMessage = json.loads(message)
 
-                if jsonMessage["message_type"] == "get_action":
-                    factsFile.flush()
+                # get action should be the last message_type
+                # UNITY SHOULD LIST FACTS FIRST, ASK FOR ACTION AS LAST PART OF 
+                # REQUEST
+
+                fact = FactFactory.generate_fact_from_json(jsonMessage)
+                temp_facts_file.write(fact)
+                temp_facts_file.flush()
+                
+            raw_output = query_scasp()
+            clean_output = parse_output(raw_output)
+
+            await socket.send(jsonize_parsed_output(clean_output))
                     
-                    raw_output = query_scasp()
-                    clean_output = parse_output(raw_output)
-                    await socket.send(jsonize_parsed_output(clean_output))
-                else:
-                    fact = FactFactory.generate_fact_from_json(jsonMessage)
-                    factsFile.write(fact)
-                    factsFile.flush()
                 
         except websockets.ConnectionClosed:
             print("Client disconnected")
