@@ -10,6 +10,7 @@ from typing import Any
 
 from FactFactory import FactFactory
 import UnityRequest as ur
+from UnityRequestFactory import UnityRequestFactory
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -56,11 +57,12 @@ def jsonize_parsed_output(parsed_output):
 def copy_facts_files_from(current_dir):
     shutil.copy(f"{current_dir}/facts.pl", f"{current_dir}/facts_temp.pl")
 
-
 # should only get called after unity time interval, explicit get_action
 # OR on a critical game event (e.g. player hits another)
 
 # Sockets should not be called every frame
+
+# also, each request should only be one thing, should not mix get_action and send fact for ex
 async def handler(socket):
     copy_facts_files_from(current_dir)
 
@@ -76,12 +78,7 @@ async def handler(socket):
                     .add("socket", socket)
                 ).build()
 
-                unity_request = None
-
-                if jsonMessage['request_type'] == 'fact':
-                    unity_request = ur.UnityTempFactRequest(unity_request_ctx)
-                elif jsonMessage['request_type'] == 'get_action':
-                    unity_request = ur.UnityActionRequest(unity_request_ctx)
+                unity_request = UnityRequestFactory.make_request(jsonMessage['request_type'], unity_request_ctx)
 
                 if unity_request:
                     await unity_request.process()        
