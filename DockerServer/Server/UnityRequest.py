@@ -1,11 +1,11 @@
-import subprocess
-import websockets
 import asyncio
 import json
+import re
 
 from FactFactory import FactFactory
 
-# ctx = UnityRequestContext().add(1).add("hi").build()
+SOLVER_TIMEOUT_SECONDS = 30
+
 
 class UnityRequestContext:
     def __init__(self):
@@ -27,41 +27,71 @@ class UnityRequest:
         self.ctx = ctx
 
     async def process(self):
-        pass
+        raise NotImplementedError
+
 
 class UnityActionRequest(UnityRequest):
     async def process(self):
-        raw_output = self.query_scasp()
+        # Keep the shared facts stable until the solver has finished reading them.
+        async with self.ctx["facts_lock"]:
+            raw_output = await self.query_scasp()
         clean_output = self.parse_output(raw_output)
         socket = self.ctx["socket"]
-        await socket.send(self.jsonize_parsed_output(clean_output))  
+        await socket.send(self.jsonize_parsed_output(clean_output))
 
-    # HELPERS
-    def query_scasp(self):
-        result = subprocess.run(
-            ["scasp", "-s1", "mainQuery.pl"],
-            capture_output=True,
-            text=True,
-            timeout=30
+    async def query_scasp(self):
+        process = await asyncio.create_subprocess_exec(
+            self.ctx["scasp"], "-s1", "mainQuery.pl",
+            cwd=self.ctx["server_dir"],
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
-        if result.returncode != 0:
-            raise RuntimeError(f"scasp failed: {result.stderr}")
-        return result.stdout
-    
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(), timeout=SOLVER_TIMEOUT_SECONDS
+            )
+        except (asyncio.TimeoutError, asyncio.CancelledError) as exc:
+            # Reap the child before releasing the facts lock, even on shutdown.
+            if process.returncode is None:
+                try:
+                    process.kill()
+                except ProcessLookupError:
+                    pass
+            await process.communicate()
+            if isinstance(exc, asyncio.CancelledError):
+                raise
+            raise RuntimeError(
+                f"scasp timed out after {SOLVER_TIMEOUT_SECONDS} seconds"
+            ) from exc
+        if process.returncode != 0:
+            detail = stderr.decode("utf-8", errors="replace").strip()
+            raise RuntimeError(f"scasp failed: {detail}")
+        return stdout.decode("utf-8", errors="replace")
+
     def parse_output(self, raw_output):
-        return raw_output.split("X = ")[1].strip()
+        # chosen_action/1 currently returns plain atoms. Ignore solver commentary.
+        output = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", raw_output)
+        match = re.search(
+            r"^[ \t]*X[ \t]*=[ \t]*([a-z][A-Za-z0-9_]*)[ \t]*[.;,]?[ \t]*\r?$",
+            output,
+            re.MULTILINE,
+        )
+        if match is None:
+            raise RuntimeError("scasp returned no recognizable action binding for X")
+        return match.group(1)
 
     def jsonize_parsed_output(self, parsed_output):
-        dataToSendBack = {
+        data_to_send_back = {
             "message_type": "possible_actions",
             "possible_actions": [parsed_output]
         }
 
-        return json.dumps(dataToSendBack)
-        
+        return json.dumps(data_to_send_back)
+
+
 class UnityTempFactRequest(UnityRequest):
     async def process(self):
         fact = FactFactory.generate_fact_from_json(self.ctx["json_message"])
-        temp_file = self.ctx["temp_facts_file"]
-        temp_file.write(fact)
-        temp_file.flush()
+        async with self.ctx["facts_lock"]:
+            with open(self.ctx["facts_temp_file"], "a", encoding="utf-8") as temp_file:
+                temp_file.write(fact)
