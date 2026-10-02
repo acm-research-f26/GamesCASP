@@ -105,4 +105,10 @@ InitTestScene*.unity*
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
 
-/.history
+# Generated IDE and test output
+/TestResults/
+*.csproj.user
+
+# Unity build diagnostics
+/*_BackUpThisFolder_ButDontShipItWithYourGame/
+/*_BurstDebugInformation_DoNotShip/
