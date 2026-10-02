@@ -68,20 +68,19 @@ async def handler(socket):
             async for message in socket:
                 jsonMessage = json.loads(message)
 
-                # get action should be the last message_type
-                # UNITY SHOULD LIST FACTS FIRST, ASK FOR ACTION AS LAST PART OF 
-                # REQUEST
-
+                # we need some sort of isFact(x)
                 fact = FactFactory.generate_fact_from_json(jsonMessage)
                 temp_facts_file.write(fact)
                 temp_facts_file.flush()
-                
-            raw_output = query_scasp()
-            clean_output = parse_output(raw_output)
 
-            await socket.send(jsonize_parsed_output(clean_output))
-                    
-                
+                # we need some sort of isGetAction(x)
+                if jsonMessage['message_type'] == 'get_action':
+                    raw_output = query_scasp()
+                    clean_output = parse_output(raw_output)
+                    await socket.send(jsonize_parsed_output(clean_output))  
+
+                # maybe we should have a PythonRequest interface  
+                                
         except websockets.ConnectionClosed:
             print("Client disconnected")
 
