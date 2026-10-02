@@ -1,3 +1,3 @@
 :- use_module(library(scasp)).
 
-noise(_).
+noise(unknown).
