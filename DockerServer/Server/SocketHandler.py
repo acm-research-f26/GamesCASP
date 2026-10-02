@@ -57,23 +57,25 @@ def copy_facts_files_from(current_dir):
 
 async def handler(socket):
     copy_facts_files_from(current_dir)
-    factsFile = open(facts_temp_file, "a") # does this open the OG or the copy?
 
-    try:
-        async for message in socket:
-            jsonMessage = json.loads(message)
+    with open(facts_temp_file, "a") as factsFile:
+        try:
+            async for message in socket:
+                jsonMessage = json.loads(message)
 
-            if jsonMessage["message_type"] == "get_action":
-                raw_output = query_scasp()
-                clean_output = parse_output(raw_output)
-                await socket.send(jsonize_parsed_output(clean_output))
-            else:
-                fact = FactFactory.generate_fact_from_json(jsonMessage)
-                factsFile.write(fact)
-                factsFile.flush()
-            
-    except websockets.ConnectionClosed:
-        print("Client disconnected")
+                if jsonMessage["message_type"] == "get_action":
+                    factsFile.flush()
+                    
+                    raw_output = query_scasp()
+                    clean_output = parse_output(raw_output)
+                    await socket.send(jsonize_parsed_output(clean_output))
+                else:
+                    fact = FactFactory.generate_fact_from_json(jsonMessage)
+                    factsFile.write(fact)
+                    factsFile.flush()
+                
+        except websockets.ConnectionClosed:
+            print("Client disconnected")
 
 async def mainTask():
     async with websockets.serve(handler, "0.0.0.0", 6767):
