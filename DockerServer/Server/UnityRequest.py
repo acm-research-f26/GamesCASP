@@ -4,10 +4,14 @@ from FactFactory import FactFactory
 
 class UnityRequestContext:
     def __init__(self):
-        self.vars = []
+        self.vars = {}
 
-    def add(self, arg):
-        self.vars.append(arg)
+    def add(self, name, value):
+        self.vars[name] = value
+        return self
+
+    def __getitem__(self, name):
+        return self.vars[name]
 
     def build(self):
         return self
@@ -22,10 +26,11 @@ class UnityRequest:
 
 class UnityActionRequest(UnityRequest):
     def process(self):
-        fact = FactFactory.generate_fact_from_json(super.vars.jsonMessage)
-        super.varstemp_facts_file.write(fact)
-        temp_facts_file.flush()
+        pass
         
 class UnityFactRequest(UnityRequest):
     def process(self):
-        
+        fact = FactFactory.generate_fact_from_json(self.ctx["json_message"])
+        temp_file = self.ctx["temp_facts_file"]
+        temp_file.write(fact)
+        temp_file.flush()
