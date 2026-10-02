@@ -7,6 +7,8 @@ import shutil
 import websockets
 import time
 
+from FactFactory import FactFactory
+
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 rules_file = os.path.join(current_dir, "rules.pl")
@@ -36,29 +38,11 @@ async def handler(socket):
 
     rtt = 0
     with open(facts_temp_file, "a") as factsFile:
-        print("client connected!")
         try:
             async for message in socket:
                 jsonMessage = json.loads(message)
-
-                print(f"message type received: {jsonMessage['message_type']}")
-
-                if(jsonMessage["message_type"] == "heard_noise"):
-                    factsFile.write("noise(unknown).\n")
-                elif(jsonMessage["message_type"] == "vase_broken"):
-                    factsFile.write(f"broken_vase({jsonMessage['culprit']}).\n")
-                    print(f"culprit was {jsonMessage['culprit']}")
-                elif(jsonMessage["message_type"] == "suspicious_sighting"):
-                    factsFile.write(f"suspicious_sighting(player).\n")
-                    factsFile.write("player_in_restricted_area.\n")
-                elif(jsonMessage["message_type"] == "diamond_broken"):
-                    factsFile.write("diamond_saw_broken.\n")
-                elif(jsonMessage["message_type"] == "alarm_raised"):
-                    factsFile.write("alarm_raised.\n")
-                elif(jsonMessage["message_type"] == "player_seen"):
-                    factsFile.write("player_seen.\n")
-                elif(jsonMessage["message_type"] == "get_action"):
-                    factsFile.flush()  # make sure facts are on disk before scasp reads them
+                if (jsonMessage["message_type"] == "get_action"):
+                    factsFile.flush()  # is this necessary, nothing written b4hand?
 
                     startTime = time.time()
 
@@ -72,6 +56,7 @@ async def handler(socket):
                     print("raw scasp output:")
                     print(rawOutput)
 
+                    # what if the incoming query doesn't the variable X?
                     parsedOutput = rawOutput.split("X = ")[1].strip()
 
                     print("parsed scasp output:")
@@ -84,11 +69,11 @@ async def handler(socket):
                     print(f"data being sent back is: {dataToSendBack}")
                     await socket.send(json.dumps(dataToSendBack))
                 else:
-                    raise ValueError(f"json message is invalid, got {jsonMessage['message_type']}")
+                    fact = FactFactory.generate_fact_from_json(jsonMessage)
+                    factsFile.write(fact)
                 
                 factsFile.flush()
-
-
+                
         except websockets.ConnectionClosed:
             print("Client disconnected")
 
