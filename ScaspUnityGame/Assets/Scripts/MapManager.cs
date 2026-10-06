@@ -21,6 +21,13 @@ public class MapManager : MonoBehaviour
         new Vector3(2.28f, -3.45f, 0)
     };
 
+    private List<Vector3> WindowPositions = new List<Vector3>()
+    {
+        new Vector3(4.6f, 3.2f, 0),
+        new Vector3(4.6f, -1.3f, 0),
+        new Vector3(-4.58f, -1.3f, 0),
+    };
+
     public void StartGameClicked()
     {
         Debug.Log("Generating map");
@@ -33,6 +40,11 @@ public class MapManager : MonoBehaviour
             {
                 wall.transform.rotation = Quaternion.Euler(0, 0, 0);
             }
+        }
+        for (int i = 0; i < WindowPositions.Count; i++)
+        {
+            GameObject window = Instantiate(windowPrefab);
+            window.transform.position = WindowPositions[i];
         }
     }
 }
