@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class Player : MonoBehaviour
+public class Player : Agent_Parent_Script
 {
     public int health;
     public string role;
