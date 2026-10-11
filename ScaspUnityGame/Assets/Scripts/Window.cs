@@ -11,7 +11,7 @@ public class Window : MonoBehaviour
 
     public GameObject zombiePrefab;
 
-    public float delay = 3;
+    public float delay = 15;
     private float timer = 0;
 
     private bool gameStarted = true;

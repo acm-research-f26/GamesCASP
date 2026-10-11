@@ -82,7 +82,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: -2413806693520163455, guid: a86470a33a6bf42c4b3595704624658b, type: 3}
+  m_Sprite: {fileID: -411461130, guid: bb41cbabde659514a964527634f15da2, type: 3}
   m_Color: {r: 1, g: 0.8970643, b: 0, a: 0.8}
   m_FlipX: 0
   m_FlipY: 0
@@ -109,4 +109,4 @@ MonoBehaviour:
   increaseSpeed: 10
   decreaseSpeed: 5
   zombiePrefab: {fileID: 8135665798404815180, guid: efabd3739dedb9b49b397c889678d801, type: 3}
-  delay: 3
+  delay: 15
