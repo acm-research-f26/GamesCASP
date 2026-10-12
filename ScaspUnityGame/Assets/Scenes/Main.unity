@@ -390,6 +390,7 @@ GameObject:
   m_Component:
   - component: {fileID: 190084540}
   - component: {fileID: 190084541}
+  - component: {fileID: 190084542}
   m_Layer: 0
   m_Name: MapManager
   m_TagString: Untagged
@@ -426,6 +427,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MapManager
   wallPrefab: {fileID: 1125487342407164844, guid: b46793d05e39f7b4d93da4cc08b81f6b, type: 3}
   windowPrefab: {fileID: 934241353181226939, guid: 174e1d606684ca645bf26b88725c1e08, type: 3}
+  leverPrefab: {fileID: 8318639659252118890, guid: ce0671f80fc52204ea726728eb258622, type: 3}
+  leverManager: {fileID: 190084542}
+  numWindows: 3
+  numLevers: 2
+--- !u!114 &190084542
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 190084539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6f8da5b778abcc45aee36a36ff5c885, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LeverManager
+  totalLevers: 2
+  winScreen: {fileID: 0}
 --- !u!1 &226535418
 GameObject:
   m_ObjectHideFlags: 0
