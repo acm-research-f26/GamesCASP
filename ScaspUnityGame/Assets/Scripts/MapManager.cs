@@ -1,4 +1,3 @@
-
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -90,7 +89,9 @@ public class MapManager : MonoBehaviour
                 wallPosition.y > 3.5f ||
                 wallPosition.y < -2f;
 
-            bool hasWindow = spawnedWindowPositions.Contains(wallPosition);
+            bool hasWindow = spawnedWindowPositions.Exists(
+                windowPosition => Vector3.Distance(windowPosition, wallPosition) < 0.15f
+            );
 
             if (hasWindow)
             {
@@ -104,18 +105,18 @@ public class MapManager : MonoBehaviour
 
 
         //generate levers
-
         leverManager.totalLevers = numLevers;
 
         for (int i = 0; i < numLevers; i++)
         {
             int index = Random.Range(0, LeverPositions.Count);
-            GameObject lever = Instantiate(leverPrefab);
             Vector3 position = LeverPositions[index];
             position.x *= Random.Range(1, 4);
             position.y *= Random.Range(1, 4);
-            lever.transform.position = position;
-            lever.GetComponent<LeverScript>().leverManager = leverManager;
+
+            GameObject lever = Instantiate(leverPrefab, position, Quaternion.identity);
+            LeverScript leverScript = lever.GetComponent<LeverScript>();
+            leverScript.leverManager = leverManager;
             LeverPositions.RemoveAt(index);
         }
 

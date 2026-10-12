@@ -10,19 +10,25 @@ public class LeverScript : MonoBehaviour
     private SpriteRenderer spriteRenderer;
     public bool isOn = false;
 
-    void Start()
+    void Awake()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
+
+        // Every lever starts OFF (red).
+        isOn = false;
         spriteRenderer.color = offColor;
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.CompareTag("Player"))
+        Debug.Log($"Lever touched by: {other.name}, Tag: {other.tag}");
+        // Only activate once when the player touches it.
+        if (other.CompareTag("Player") && !isOn)
         {
             isOn = true;
             spriteRenderer.color = onColor;
             leverManager.LeverActivated();
         }
     }
+
 }
