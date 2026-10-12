@@ -6,22 +6,25 @@ public class Zombie : MonoBehaviour
     public float attackRange = 1f;
     public float attackCooldown = 1f;
 
-    private Transform player;
+    public PlayerManager playerManager;
+
+    private Player player;
     private SpriteRenderer spriteRenderer;
     private float lastAttackTime = 0f;
 
     void Start()
     {
-        player = GameObject.Find("Survivor1").transform;
         spriteRenderer = GetComponent<SpriteRenderer>();
+        playerManager = FindFirstObjectByType<PlayerManager>();
     }
 
     void Update()
     {
+        player = nearestPlayer();
         if (player == null)
             return;
 
-        Vector3 dir = player.position - transform.position;
+        Vector3 dir = player.transform.position - transform.position;
 
         if (dir.x < 0)
         {
@@ -46,5 +49,22 @@ public class Zombie : MonoBehaviour
                 lastAttackTime = Time.time;
             }
         }
+    }
+
+    Player nearestPlayer()
+    {
+        float nearestDistance = 1000f;
+        Player nearestPlayer = null;
+
+        foreach (Player player in playerManager.players)
+        {
+            float distance = Vector3.Distance(transform.position, player.transform.position);
+            if (distance < nearestDistance)
+            {
+                nearestDistance = distance;
+                nearestPlayer = player;
+            }
+        }
+        return nearestPlayer;
     }
 }
