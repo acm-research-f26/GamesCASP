@@ -9,17 +9,17 @@ public class PlayerBrain : MonoBehaviour
 
     void Start()
     {
-        root = new Sequence(new List<Node> 
-        {
-            new LastLeverCondition(state),
-            new PullLever()
-        }
-        );
+        //root = new Sequence(new List<Node> 
+        //{
+            //new LastLeverCondition(state),
+            //new PullLever()
+        //}
+        //);
     }
 
     void Update()
     {
         state.lastLever = isLastLever;
-        root.Tick();
+        //root.Tick();
     }
 }
