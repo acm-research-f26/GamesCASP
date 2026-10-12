@@ -1,10 +1,16 @@
 using UnityEngine;
 
-public class PullLever : Node
+public class PullLever : ActionNode
 {
-    public override NodeStatus Tick()
+    LastLeverCondition lastLever;
+    public override bool execute()
     {
-        Debug.Log("Pulling lever!");
-        return NodeStatus.Success;
+        if (lastLever.evaluate())
+        {
+            Debug.Log("Pulling lever!");
+            return true;
+        }
+
+        return false;
     }
 }
