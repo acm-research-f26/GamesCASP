@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class LeverScript : MonoBehaviour
 {
+    public event System.Action<LeverScript> Activated;
+
     public LeverManager leverManager;
 
     public Color offColor = Color.red;
@@ -28,6 +30,7 @@ public class LeverScript : MonoBehaviour
             isOn = true;
             spriteRenderer.color = onColor;
             leverManager.LeverActivated();
+            Activated?.Invoke(this);
         }
     }
 
