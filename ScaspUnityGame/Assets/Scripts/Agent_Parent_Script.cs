@@ -1,13 +1,16 @@
-
 using UnityEngine;
 
 public class Agent_Parent_Script : MonoBehaviour
 {
-    [Tooltip("This agent's AI component. Must implement IFactStrategy.")]
+    [Tooltip("This agent's AI strategy component.")]
+    [SerializeField] private AIStrategy aiStrategy;
+
+    [Tooltip("This agent's fact strategy component. Must implement IFactStrategy.")]
     [SerializeField] private MonoBehaviour factStrategyComponent;
+
     private IFactStrategy runtimeFactStrategy;
 
-    // Supports strategies created by code as well as components assigned in the Inspector.
+    // Supports strategies created by code as well as components assigned in the Inspector
     public void SetFactStrategy(IFactStrategy strategy)
     {
         runtimeFactStrategy = strategy ?? throw new System.ArgumentNullException(nameof(strategy));
@@ -17,10 +20,12 @@ public class Agent_Parent_Script : MonoBehaviour
     {
         if (fact == null)
             throw new System.ArgumentNullException(nameof(fact));
+
         if (fact.Lifetime == FactLifetime.Transient)
             throw new System.ArgumentException("Transient facts must be queried, not stored.", nameof(fact));
 
         var strategy = runtimeFactStrategy ?? (factStrategyComponent as IFactStrategy);
+
         if (strategy == null)
         {
             Debug.LogWarning($"{name}: Assign an AI component implementing IFactStrategy before receiving facts.", this);
@@ -31,78 +36,16 @@ public class Agent_Parent_Script : MonoBehaviour
         return true;
     }
 
+    // Delegate action selection over to AIStrategy script
     public virtual void ExecuteAction(string action, string target = "")
     {
-        switch (action)
+        if (aiStrategy == null)
         {
-            case "run_from":
-                RunFrom(target);
-                break;
-
-            case "hold_barricade":
-                HoldBarricade(target);
-                break;
-
-            case "move_to_barricade":
-                MoveToBarricade(target);
-                break;
-
-            case "pull_lever":
-                PullLever(target);
-                break;
-
-            case "move_to_lever":
-                MoveToLever(target);
-                break;
-
-            case "hunt_lever":
-                HuntLever();
-                break;
-
-            case "wait":
-                Wait();
-                break;
-
-            default:
-                Debug.LogWarning(
-                    $"{name}: Unknown action '{action}'"
-                );
-                break;
+            Debug.LogWarning($"{name}: No AI strategy assigned.", this);
+            return;
         }
-    }
 
-    protected virtual void RunFrom(string target)
-    {
-        Debug.Log($"{name}: Run from {target}");
-    }
-
-    protected virtual void HoldBarricade(string target)
-    {
-        Debug.Log($"{name}: Hold barricade {target}");
-    }
-
-    protected virtual void MoveToBarricade(string target)
-    {
-        Debug.Log($"{name}: Move to barricade {target}");
-    }
-
-    protected virtual void PullLever(string target)
-    {
-        Debug.Log($"{name}: Pull lever {target}");
-    }
-
-    protected virtual void MoveToLever(string target)
-    {
-        Debug.Log($"{name}: Move to lever {target}");
-    }
-
-    protected virtual void HuntLever()
-    {
-        Debug.Log($"{name}: Hunt for lever");
-    }
-
-    protected virtual void Wait()
-    {
-        Debug.Log($"{name}: Wait");
+        // Let AI Strategy execute actions for the NPC
+        aiStrategy.ExecuteAction(action, target);
     }
 }
