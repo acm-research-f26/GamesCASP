@@ -1,0 +1,697 @@
+VBCSCompilerPreWarmer: pre-warm launched (dotnet PID 36988)
+VBCSCompiler prewarm took 7.95 ms
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Built from '6000.6/respin/6000.6.0f1-fa21a270ab12' branch; Version is '6000.6.0f1 (f7f8ed4d1e24) revision 16251117'; Using compiler version '194234433'; Build Type 'Release'
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-Marcelo" at "2026-10-19T21:20:29.6709781Z"
+OS: 'Windows 11  (10.0.26200) Core' Language: 'en' Physical Memory: 32212 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+System  architecture: x64
+Process architecture: x64
+Date: 2026-10-19T21:20:29Z
+[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 11700, path: "C:/Program Files/Unity Hub/UnityLicensingClient_V1/Unity.Licensing.Client.exe")
+[Licensing::Module] LicensingClient has failed validation; ignoring
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.18.3+d7ffd15
+  Session Id:              e17ba673bd614040991b51428f41787d
+  Correlation Id:          1856a700052327517cf18179fe0029af
+  External correlation Id: 616084947104277401
+  Machine Id:              evX+45HxLmGQfCbEklgGktQ45PM=
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-Marcelo" (connect: 0.00s, validation: 0.00s, handshake: 0.03s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-Marcelo-notifications" at "2026-10-19T21:20:29.7020685Z"
+[Licensing::Module] Error: Access token is unavailable; failed to update
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: 1375862777023-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+[Licensing::Client] Successfully updated license, isAsync: True, time: 0.00
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] Licensing Background thread has ended after 0.04s
+
+COMMAND LINE ARGUMENTS:
+C:\Program Files\Unity\Hub\Editor\6000.6.0f1\Editor\Unity.exe
+-batchmode
+-nographics
+-projectPath
+C:/Users/Marcelo/Documents/Code/GamesCASP/ScaspUnityGame
+-executeMethod
+FactPipelineVerification.Run
+-quit
+-logFile
+C:/Users/Marcelo/Documents/Code/GamesCASP/fact-verification.log
+Successfully changed project path to: C:/Users/Marcelo/Documents/Code/GamesCASP/ScaspUnityGame
+C:/Users/Marcelo/Documents/Code/GamesCASP/ScaspUnityGame
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gfx=262144"
+    "memorysetup-remapper-allocator-initial-capacity=32768"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-main-allocator-mimalloc-enabled=1"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+Logging is directed to a specific file, skipping project log.
+Player connection [32168]  Target information:
+
+Player connection [32168]  * "[IP] 172.20.0.1 [Port] 55504 [Flags] 2 [Guid] 1744663897 [EditorId] 1744663897 [Version] 1048832 [Id] WindowsEditor(7,DESKTOP-71E3BSQ) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" 
+
+Player connection [32168]  * "[IP] 11.30.6.243 [Port] 55504 [Flags] 2 [Guid] 1744663897 [EditorId] 1744663897 [Version] 1048832 [Id] WindowsEditor(7,DESKTOP-71E3BSQ) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" 
+
+Player connection [32168] Host joined multi-casting on [225.0.0.222:54997]...
+Player connection [32168] Host joined alternative multi-casting on [225.0.0.222:34997]...
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+[Package Manager] Connected to IPC stream "Upm-33600" after 0.2 seconds.
+[Licensing::Client] Successfully resolved entitlement details
+Library Redirect Path: Library/
+Initialising UDS system complete:
+  - System type: Client
+  - Resource namespace: d7d9063fb4e55f065960198ccccb4f95
+  - Shared memory size: 1073741824
+  - Command buffer id: 1052576
+  - Command buffer size: 8192
+  - Hashmap size: 4194304
+  - Service connected: false
+Launching Unity Data Store - C:/Program Files/Unity/Hub/Editor/6000.6.0f1/Editor/Data/Tools/Unity.DataStore.exe 
+Unity Data Store artifact dir = Library/DataStore, working dir = C:/Users/Marcelo/Documents/Code/GamesCASP/ScaspUnityGame[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Unity Data Store running and initialised
+Initialize engine version: 6000.6.0f1 (f7f8ed4d1e24)
+[EntityIdStore] init: VM path (explicit commit), pageSize=4096, blockCount=1048576, entitiesPerBlock=256, slots reserved=4294967296 bytes
+[Subsystems] Discovering subsystems at path C:/Program Files/Unity/Hub/Editor/6000.6.0f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path C:/Users/Marcelo/Documents/Code/GamesCASP/ScaspUnityGame/Assets
+Forcing GfxDevice: Null
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+Shader Hidden/ChartRasterizerHardware is not supported: GPU does not support conservative rasterization
+Initialize mono
+Mono path[0] = 'C:/Program Files/Unity/Hub/Editor/6000.6.0f1/Editor/Data/Managed'
+Mono path[1] = 'C:/Program Files/Unity/Hub/Editor/6000.6.0f1/Editor/Data/BCLExtensions/runtime/netstandard2.1'
+Mono path[2] = 'C:/Program Files/Unity/Hub/Editor/6000.6.0f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-win32'
+Mono config path = 'C:/Program Files/Unity/Hub/Editor/6000.6.0f1/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56600
+CodeReloadManager initialized
+ImportWorker Server TCP listen port: 0
+AcceleratorClientConnectionCallback - disconnected - :0
+Begin MonoManager ReloadAssembly
+Registering precompiled unity dll's ...
+Register platform support module: C:/Program Files/Unity/Hub/Editor/6000.6.0f1/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
+Registered in 0.001794 seconds.
+Native extension for WindowsStandalone target not found
+Package Manager log level set to [2]
+ScheduleIndexationOnStartup MainProcess:False IndexOnStartup:True
+Scripting: successfully reloaded assembly
+- Finished resetting the current domain, in  0.579 seconds
+Domain Reload Profiling: 1030ms
+	BeginReloadAssembly (122ms)
+		CreateAndSetChildDomain (20ms)
+	RebuildCommonClasses (4ms)
+	RebuildNativeTypeToScriptingClass (12ms)
+	initialDomainReloadingComplete (61ms)
+	LoadAllAssembliesAndSetupDomain (252ms)
+		LoadAssemblies (99ms)
+		TypeCache.Refresh (167ms)
+			TypeCache.ScanAssembly (154ms)
+		AnalyzeDomain (1ms)
+	FinalizeReload (580ms)
+		SetupLoadedEditorAssemblies (0ms)
+			BeforeProcessingInitializeOnLoad (77ms)
+			ProcessInitializeOnLoadAttributes (108ms)
+			ProcessInitializeOnLoadMethodAttributes (196ms)
+[Licensing::Client] Successfully resolved entitlement details
+Application.AssetDatabase Initial Refresh Start
+[Package Manager] Restoring resolved packages state from cache
+[Licensing::Client] Successfully resolved entitlement details
+[Package Manager] Registered 75 packages:
+  Packages from [https://packages.unity.com]:
+    com.unity.ai.assistant@2.20.0-pre.1 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.ai.assistant@ceb45b7b3ebd)
+    com.unity.ai.inference@2.6.1 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.ai.inference@9a123aee5df7)
+    com.unity.ai.navigation@2.0.14 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.ai.navigation@134dd6a3b97b)
+    com.unity.collab-proxy@2.13.6 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.collab-proxy@4628d2ba6ea4)
+    com.unity.ide.rider@3.0.38 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.ide.rider@1f60b3138684)
+    com.unity.ide.visualstudio@2.0.26 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.ide.visualstudio@a99d56dec63f)
+    com.unity.inputsystem@1.20.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.inputsystem@7a4e1a2a8194)
+    com.unity.visualscripting@1.9.12 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.visualscripting@4edfcc09512f)
+    com.unity.2d.animation@16.0.1 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.2d.animation@899988b542b9)
+    com.unity.2d.pixel-perfect@6.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.2d.pixel-perfect@a860cb24a0cc)
+    com.unity.2d.psdimporter@15.0.1 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.2d.psdimporter@e02a9153d8d9)
+    com.unity.2d.spriteshape@16.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.2d.spriteshape@42798c9d35d3)
+    com.unity.2d.tilemap.extras@9.0.1 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.2d.tilemap.extras@9446f3c60919)
+    com.unity.2d.aseprite@6.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.2d.aseprite@ab909e3e9b5f)
+    com.unity.2d.tooling@4.0.1 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.2d.tooling@4e93af4036ee)
+    com.unity.dt.app-ui@2.1.11 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.dt.app-ui@cd5609b130ce)
+    com.unity.nuget.newtonsoft-json@3.2.2 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.nuget.newtonsoft-json@4dfd81071c64)
+    com.unity.nuget.mono-cecil@1.11.6 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.nuget.mono-cecil@ecb9724e46ff)
+    com.unity.searcher@4.9.5 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.searcher@a463122f2c00)
+    com.unity.profiling.core@1.0.3 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.profiling.core@8a49f7027d06)
+    com.unity.2d.common@15.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.2d.common@b779c433ed47)
+  Built-in packages:
+    com.unity.feature.2d@2.0.2 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.feature.2d@11724ae7e5b5)
+    com.unity.render-pipelines.universal@17.6.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.render-pipelines.universal@8457e85b8184)
+    com.unity.test-framework@1.8.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.test-framework@7a3849e09bd0)
+    com.unity.timeline@6.6.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.timeline@281d5f7e7d7d)
+    com.unity.ugui@2.6.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.ugui@23caec89ae27)
+    com.unity.modules.accessibility@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.accessibility)
+    com.unity.modules.adaptiveperformance@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.adaptiveperformance)
+    com.unity.modules.ai@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.ai)
+    com.unity.modules.androidjni@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.androidjni)
+    com.unity.modules.animation@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.animation)
+    com.unity.modules.assetbundle@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.assetbundle)
+    com.unity.modules.audio@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.audio)
+    com.unity.modules.cloth@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.cloth)
+    com.unity.modules.director@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.director)
+    com.unity.modules.imageconversion@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.imageconversion)
+    com.unity.modules.imgui@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.imgui)
+    com.unity.modules.jsonserialize@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.jsonserialize)
+    com.unity.modules.particlesystem@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.particlesystem)
+    com.unity.modules.physics@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.physics)
+    com.unity.modules.physics2d@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.physics2d)
+    com.unity.modules.physicscore2d@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.physicscore2d)
+    com.unity.modules.screencapture@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.screencapture)
+    com.unity.modules.terrain@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.terrain)
+    com.unity.modules.terrainphysics@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.terrainphysics)
+    com.unity.modules.tetgen@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.tetgen)
+    com.unity.modules.tilemap@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.tilemap)
+    com.unity.modules.timelinefoundation@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.timelinefoundation)
+    com.unity.modules.ui@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.ui)
+    com.unity.modules.uielements@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.uielements)
+    com.unity.modules.umbra@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.umbra)
+    com.unity.modules.unityanalytics@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.unityanalytics)
+    com.unity.modules.unitywebrequest@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.unitywebrequest)
+    com.unity.modules.unitywebrequestassetbundle@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.unitywebrequestassetbundle)
+    com.unity.modules.unitywebrequestaudio@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.unitywebrequestaudio)
+    com.unity.modules.unitywebrequesttexture@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.unitywebrequesttexture)
+    com.unity.modules.unitywebrequestwww@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.unitywebrequestwww)
+    com.unity.modules.vectorgraphics@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.vectorgraphics)
+    com.unity.modules.vehicles@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.vehicles)
+    com.unity.modules.video@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.video)
+    com.unity.modules.wind@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.wind)
+    com.unity.modules.xr@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.xr)
+    com.unity.modules.subsystems@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.subsystems)
+    com.unity.modules.hierarchycore@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.modules.hierarchycore)
+    com.unity.ext.nunit@2.1.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.ext.nunit@0198eae3b53e)
+    com.unity.render-pipelines.core@17.6.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.render-pipelines.core@2d66c71e606e)
+    com.unity.shadergraph@17.6.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.shadergraph@ef6135652377)
+    com.unity.render-pipelines.universal-config@17.6.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.render-pipelines.universal-config@561422b74439)
+    com.unity.2d.sprite@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.2d.sprite@947350d67f82)
+    com.unity.2d.tilemap@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.2d.tilemap@639ca1d99254)
+    com.unity.burst@2.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.burst@626e66ab421b)
+    com.unity.collections@6.6.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.collections@10fff0607388)
+    com.unity.mathematics@1.4.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.mathematics@8306a64d0cd6)
+    com.unity.graph-authoring@1.0.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.graph-authoring@cfd2588851ee)
+    com.unity.test-framework.performance@6.6.0 (location: C:\Users\Marcelo\Documents\Code\GamesCASP\ScaspUnityGame\Library\PackageCache\com.unity.test-framework.performance@0a60b857a52e)
+[Subsystems] No new subsystems found in resolved package list.
+[Package Manager] Done registering packages in 0.04 seconds
+[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+Refreshing native plugins compatible for Editor in 3.01 ms, found 6 plugins.
+Starting: C:\Program Files\Unity\Hub\Editor\6000.6.0f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --defer-dag-verification --dagfile="Library/Bee/1900b0aE.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssemblies
+WorkingDir: C:/Users/Marcelo/Documents/Code/GamesCASP/ScaspUnityGame
+DisplayProgressbar: Compiling Scripts
+ExitCode: 0 Duration: 0s913ms
+[1415/1879  0s] ILPP-Configuration Library/ilpp-configuration.nevergeneratedoutput
+[1875/1879  0s] Csc Library/Bee/artifacts/1900b0aE.dag/Assembly-CSharp-Editor.dll (+2 others)
+[1876/1879  0s] ILPostProcess Library/Bee/artifacts/1900b0aE.dag/post-processed/Assembly-CSharp-Editor.dll (+pdb)
+Processing assembly Library/Bee/artifacts/1900b0aE.dag/Assembly-CSharp-Editor.dll, with 149 defines and 425 references
+
+processors: Unity.Jobs.CodeGen.JobsILPostProcessor, zzzUnity.Burst.CodeGen.BurstILPostProcessor
+
+1 processor(s) skipped this assembly
+
+running Unity.Jobs.CodeGen.JobsILPostProcessor
+[1877/1879  0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp-Editor.dll
+[1878/1879  0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp-Editor.pdb
+*** Tundra build success (0.88 seconds), 5 items updated, 1879 evaluated
+AssetDatabase: script compilation time: 1.479304s
+[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+Starting: C:\Program Files\Unity\Hub\Editor\6000.6.0f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --defer-dag-verification --dagfile="Library/Bee/1900b0aE.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssemblies
+WorkingDir: C:/Users/Marcelo/Documents/Code/GamesCASP/ScaspUnityGame
+Total cache size 230570264
+Total cache size after purge 230570264, took 00:00:00.6906477
+ExitCode: 0 Duration: 0s946ms
+[1414/1879  0s] ILPP-Configuration Library/ilpp-configuration.nevergeneratedoutput
+[1871/1879  0s] Csc Library/Bee/artifacts/1900b0aE.dag/Assembly-CSharp.dll (+2 others)
+Assets\Scripts\Zombie.cs(18,25): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+[1873/1879  0s] ILPostProcess Library/Bee/artifacts/1900b0aE.dag/post-processed/Assembly-CSharp-Editor.dll (+pdb)
+Processing assembly Library/Bee/artifacts/1900b0aE.dag/Assembly-CSharp-Editor.dll, with 149 defines and 425 references
+
+processors: Unity.Jobs.CodeGen.JobsILPostProcessor, zzzUnity.Burst.CodeGen.BurstILPostProcessor
+
+1 processor(s) skipped this assembly
+
+running Unity.Jobs.CodeGen.JobsILPostProcessor
+[1874/1879  0s] ILPostProcess Library/Bee/artifacts/1900b0aE.dag/post-processed/Assembly-CSharp.dll (+pdb)
+Processing assembly Library/Bee/artifacts/1900b0aE.dag/Assembly-CSharp.dll, with 151 defines and 402 references
+
+processors: Unity.Jobs.CodeGen.JobsILPostProcessor, zzzUnity.Burst.CodeGen.BurstILPostProcessor
+
+1 processor(s) skipped this assembly
+
+running Unity.Jobs.CodeGen.JobsILPostProcessor
+[1877/1879  0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp.pdb
+[1878/1879  0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp.dll
+*** Tundra build success (0.92 seconds), 6 items updated, 1879 evaluated
+Assets\Scripts\Zombie.cs(18,25): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Begin MonoManager ReloadAssembly
+Total cache size 230570264
+Total cache size after purge 230570264, took 00:00:00.2727015
+'Packages/com.unity.render-pipelines.core/Editor/Deprecated.cs' contains partial class of Unity.Object, exactly 1 of the partial classes needs to be in a file with the same filename. This is to know the one that can be referenced from ie. GameObjects
+'Packages/com.unity.render-pipelines.core/Editor/Deprecated.cs' contains partial class of Unity.Object, exactly 1 of the partial classes needs to be in a file with the same filename. This is to know the one that can be referenced from ie. GameObjects
+Refreshing native plugins compatible for Editor in 3.72 ms, found 6 plugins.
+Native extension for WindowsStandalone target not found
+Refreshing native plugins compatible for Editor in 3.31 ms, found 6 plugins.
+[Licensing::Client] Error: Code 404 while processing request (status: Found 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+[Licensing::Client] Error: Code 404 while processing request (status: Found 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+[Licensing::Client] Error: Code 404 while processing request (status: Found 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:True
+Scripting: successfully reloaded assembly
+- Finished resetting the current domain, in  1.911 seconds
+Domain Reload Profiling: 3088ms
+	BeginReloadAssembly (192ms)
+		DisableScriptedObjects (19ms)
+		CreateAndSetChildDomain (34ms)
+	RebuildCommonClasses (8ms)
+	RebuildNativeTypeToScriptingClass (13ms)
+	initialDomainReloadingComplete (83ms)
+	LoadAllAssembliesAndSetupDomain (882ms)
+		LoadAssemblies (440ms)
+		TypeCache.Refresh (274ms)
+			TypeCache.ScanAssembly (255ms)
+		AnalyzeDomain (95ms)
+			BuildScriptInfoCaches (85ms)
+			ResolveRequiredComponents (7ms)
+	FinalizeReload (1912ms)
+		SetupLoadedEditorAssemblies (0ms)
+			LogAssemblyErrors (4ms)
+			BeforeProcessingInitializeOnLoad (115ms)
+			ProcessInitializeOnLoadAttributes (1264ms)
+			ProcessInitializeOnLoadMethodAttributes (222ms)
+			AfterProcessingInitializeOnLoad (7ms)
+		AwakeInstancesAfterBackupRestoration (22ms)
+Starting new worker id: 0 with log in C:/Users/Marcelo/Documents/Code/GamesCASP/ScaspUnityGame/Logs/AssetImportWorkerHW0.log
+Refreshing native plugins compatible for Editor in 3.54 ms, found 6 plugins.
+
+Asset Pipeline Refresh (id=45004780dec22b84097ffacbff1752bb): Total: 7.060 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+	(Values over 0.05ms)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=2612 ms
+		Asset DB Callback time: managed=341 ms, native=48 ms
+		Scripting: domain reloads=1, domain reload time=1264 ms, compile time=2702 ms, other=91 ms
+		Project Asset Count: scripts=2440, non-scripts=6337
+		Asset File Changes: new=0, changed=2, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokePackagesCallback: 40.565ms
+	ApplyChangesToAssetFolders: 0.807ms
+	Scan: 259.118ms
+	Collect global state as custom dependencies: 14.602ms
+	OnSourceAssetsModified: 0.540ms
+	CategorizeScriptCompilationAssets: 52.947ms
+	ProcessAssetsWithTransientArtifactChanges: 98.013ms
+	CategorizeAssets: 77.294ms
+	CompileScripts: 2702.029ms
+	ImportOutOfDateAssets: 1937.313ms (1924.785ms without children)
+		UnloadImportedAssets: 0.571ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 1.062ms
+		ImportSchedulerStart: 10.843ms
+	PostProcessAllAssets: 343.786ms
+		XRBuildSystem.XRAssetImported 1.120ms
+		VCAutoAddAssetPostprocess 0.941ms
+		PostProcessCallbackCreateDeferredMaterials 0.065ms
+		MonoPostProcessAllAssets: 341.240ms
+			AssetPostprocessor.OnPostprocessAllAssets 131.433ms
+			AssetReferenceReimportMonitor.OnPostprocessAllAssets 26.914ms
+			StyleCatalogPostProcessor.OnPostprocessAllAssets 13.601ms
+			UniversalRenderPipelineGlobalSettingsPostprocessor.OnPostprocessAllAssets 12.840ms
+			BuilderAssetPostprocessor.OnPostprocessAllAssets 4.255ms
+			SyncVS.PostprocessSyncProject 3.608ms
+			SpeedTree9Postprocessor.OnPostprocessAllAssets 2.785ms
+			SpriteSlicePostprocessor.OnPostprocessAllAssets 1.739ms
+			AssetChangedListener.OnPostprocessAllAssets 1.518ms
+			GraphRefreshPostprocessor.OnPostprocessAllAssets 1.493ms
+			MaterialPostprocessor.OnPostprocessAllAssets 1.445ms
+			RetainedModeAssetPostprocessor.OnPostprocessAllAssets 1.068ms
+			WindowAssetPostprocessingWatcher.OnPostprocessAllAssets 1.062ms
+			ShaderGraphAssetPostProcessor.OnPostprocessAllAssets 0.994ms
+			AssetChangeDetector.OnPostprocessAllAssets 0.681ms
+			EditModeScopePostprocessor.OnPostprocessAllAssets 0.661ms
+			RenderPipelineGlobalSettingsPostprocessor.OnPostprocessAllAssets 0.589ms
+			ShaderReflectionAssetPostProcessor.OnPostprocessAllAssets 0.474ms
+			SpriteEditorTexturePostprocessor.OnPostprocessAllAssets 0.473ms
+			ArtifactBrowserPostProcessor.OnPostprocessAllAssets 0.366ms
+			UVCSAssetPostprocessor.OnPostprocessAllAssets 0.357ms
+			SkillsProjectAssetPostprocessor.OnPostprocessAllAssets 0.302ms
+			TextAssetPostProcessor.OnPostprocessAllAssets 0.293ms
+			SpriteShapeAssetPostProcessor.OnPostprocessAllAssets 0.292ms
+			InputActionAssetPostprocessor.OnPostprocessAllAssets 0.284ms
+			ModelAssetProcessor.OnPostprocessAllAssets 0.249ms
+			PostProcessor.OnPostprocessAllAssets 0.242ms
+			AssetProcessor.OnPostprocessAllAssets 0.224ms
+			ReferencedClipsPostProcessor.OnPostprocessAllAssets 0.222ms
+			InputActionJsonNameModifierAssetProcessor.OnPostprocessAllAssets 0.220ms
+			ProjectSettingsPostprocessor.OnPostprocessAllAssets 0.215ms
+			AudioMixerPostprocessor.OnPostprocessAllAssets 0.194ms
+			TMPro_TexturePostProcessor.OnPostprocessAllAssets 0.188ms
+			AssetEvents.OnPostprocessAllAssets 0.182ms
+			TerrainToolbarOverlayPostProcessor.OnPostprocessAllAssets 0.157ms
+			SpriteLibraryAssetPostprocessor.OnPostprocessAllAssets 0.149ms
+			SpeedTreePostProcessor.OnPostprocessAllAssets 0.145ms
+			SamplePostprocessor.OnPostprocessAllAssets 0.117ms
+			AssetDatabaseCallbacks.OnPostprocessAllAssets 0.114ms
+			ThemePostprocessor.OnPostprocessAllAssets 0.113ms
+			PSDImportPostProcessor.OnPostprocessAllAssets 0.098ms
+			ConfigAssetsTracker.OnPostprocessAllAssets 0.098ms
+			ScenarioDriftAssetsTracker.OnPostprocessAllAssets 0.085ms
+			AssetReloadNotifier.OnPostprocessAllAssets 0.074ms
+			PSDImporterAssetPostProcessor.OnPostprocessAllAssets 0.060ms
+			AudioContainerPostProcessor.OnPostprocessAllAssets 0.055ms
+	PostAssetChangesProfiler: 7.593ms
+	UnloadStreamsBegin: 2.004ms
+	PersistCurrentRevisions: 0.240ms
+	GenerateScriptTypeHashes: 1.787ms
+	GenerateScriptTypeSerializationHashes: 3.464ms
+	Untracked: 1518.194ms
+
+Application.AssetDatabase Initial Refresh End
+Shader Hidden/ChartRasterizerHardware is not supported: GPU does not support conservative rasterization
+Scanning for USB devices : 1.823ms
+Initializing Unity extensions:
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+[MODES] Loading mode Default (0) for mode-current-id-ScaspUnityGame
+Unloading 70 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 11072 unused Assets / (6.2 MB). Loaded Objects now: 12132.
+Memory consumption went from 0.57 GB to 0.57 GB.
+Total: 14.433000 ms (FindLiveObjects: 0.829500 ms CreateObjectMapping: 0.573400 ms MarkObjects: 11.000200 ms  DeleteObjects: 1.694300 ms)
+
+PASS: Fact preserves explicit lifetime and identity
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+FactPipelineVerification/<>c__DisplayClass1_0:<Run>b__0 (bool,string) (at Assets/Editor/FactPipelineVerification.cs:24)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:30)
+
+(Filename: Assets/Editor/FactPipelineVerification.cs Line: 24)
+
+PASS: Blank subject IDs rejected
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+FactPipelineVerification/<>c__DisplayClass1_0:<Run>b__0 (bool,string) (at Assets/Editor/FactPipelineVerification.cs:24)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:33)
+
+(Filename: Assets/Editor/FactPipelineVerification.cs Line: 24)
+
+PASS: Invalid lifetime rejected
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+FactPipelineVerification/<>c__DisplayClass1_0:<Run>b__0 (bool,string) (at Assets/Editor/FactPipelineVerification.cs:24)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:35)
+
+(Filename: Assets/Editor/FactPipelineVerification.cs Line: 24)
+
+Lever touched by: FactVerification_near, Tag: Player
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+LeverScript:OnTriggerEnter2D (UnityEngine.Collider2D) (at Assets/Scripts/LeverScript.cs:26)
+System.Reflection.RuntimeMethodInfo:Invoke (object,System.Reflection.BindingFlags,System.Reflection.Binder,object[],System.Globalization.CultureInfo)
+System.Reflection.MethodBase:Invoke (object,object[])
+FactPipelineVerification:InvokeCallback (UnityEngine.MonoBehaviour,string,object[]) (at Assets/Editor/FactPipelineVerification.cs:133)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:75)
+
+(Filename: Assets/Scripts/LeverScript.cs Line: 26)
+
+PASS: Notification happens after storage
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+FactPipelineVerification/<>c__DisplayClass1_0:<Run>b__0 (bool,string) (at Assets/Editor/FactPipelineVerification.cs:24)
+FactPipelineVerification/<>c__DisplayClass1_1:<Run>b__3 (Fact) (at Assets/Editor/FactPipelineVerification.cs:44)
+AgentFactReceiver:ReceiveFact (Fact) (at Assets/Scripts/AgentFactReceiver.cs:19)
+LeverFactEmitter:OnActivated (LeverScript) (at Assets/Scripts/LeverFactEmitter.cs:48)
+LeverScript:OnTriggerEnter2D (UnityEngine.Collider2D) (at Assets/Scripts/LeverScript.cs:33)
+System.Reflection.RuntimeMethodInfo:Invoke (object,System.Reflection.BindingFlags,System.Reflection.Binder,object[],System.Globalization.CultureInfo)
+System.Reflection.MethodBase:Invoke (object,object[])
+FactPipelineVerification:InvokeCallback (UnityEngine.MonoBehaviour,string,object[]) (at Assets/Editor/FactPipelineVerification.cs:133)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:75)
+
+(Filename: Assets/Editor/FactPipelineVerification.cs Line: 24)
+
+PASS: Nearby agent with two colliders stores exactly once
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+FactPipelineVerification/<>c__DisplayClass1_0:<Run>b__0 (bool,string) (at Assets/Editor/FactPipelineVerification.cs:24)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:76)
+
+(Filename: Assets/Editor/FactPipelineVerification.cs Line: 24)
+
+PASS: Second nearby agent stores the event independently
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+FactPipelineVerification/<>c__DisplayClass1_0:<Run>b__0 (bool,string) (at Assets/Editor/FactPipelineVerification.cs:24)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:77)
+
+(Filename: Assets/Editor/FactPipelineVerification.cs Line: 24)
+
+PASS: Out-of-range agent receives nothing
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+FactPipelineVerification/<>c__DisplayClass1_0:<Run>b__0 (bool,string) (at Assets/Editor/FactPipelineVerification.cs:24)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:78)
+
+(Filename: Assets/Editor/FactPipelineVerification.cs Line: 24)
+
+PASS: Disabled receiver receives nothing
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+FactPipelineVerification/<>c__DisplayClass1_0:<Run>b__0 (bool,string) (at Assets/Editor/FactPipelineVerification.cs:24)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:79)
+
+(Filename: Assets/Editor/FactPipelineVerification.cs Line: 24)
+
+PASS: Excluded layer receives nothing
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+FactPipelineVerification/<>c__DisplayClass1_0:<Run>b__0 (bool,string) (at Assets/Editor/FactPipelineVerification.cs:24)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:80)
+
+(Filename: Assets/Editor/FactPipelineVerification.cs Line: 24)
+
+PASS: Stored lever fact has correct payload
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+FactPipelineVerification/<>c__DisplayClass1_0:<Run>b__0 (bool,string) (at Assets/Editor/FactPipelineVerification.cs:24)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:81)
+
+(Filename: Assets/Editor/FactPipelineVerification.cs Line: 24)
+
+Lever touched by: FactVerification_near, Tag: Player
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+LeverScript:OnTriggerEnter2D (UnityEngine.Collider2D) (at Assets/Scripts/LeverScript.cs:26)
+System.Reflection.RuntimeMethodInfo:Invoke (object,System.Reflection.BindingFlags,System.Reflection.Binder,object[],System.Globalization.CultureInfo)
+System.Reflection.MethodBase:Invoke (object,object[])
+FactPipelineVerification:InvokeCallback (UnityEngine.MonoBehaviour,string,object[]) (at Assets/Editor/FactPipelineVerification.cs:133)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:84)
+
+(Filename: Assets/Scripts/LeverScript.cs Line: 26)
+
+PASS: Already-pulled lever does not emit again
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+FactPipelineVerification/<>c__DisplayClass1_0:<Run>b__0 (bool,string) (at Assets/Editor/FactPipelineVerification.cs:24)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:85)
+
+(Filename: Assets/Editor/FactPipelineVerification.cs Line: 24)
+
+PASS: Transient fact cannot enter stored memory
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+FactPipelineVerification/<>c__DisplayClass1_0:<Run>b__0 (bool,string) (at Assets/Editor/FactPipelineVerification.cs:24)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:89)
+
+(Filename: Assets/Editor/FactPipelineVerification.cs Line: 24)
+
+PASS: Notification happens after storage
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+FactPipelineVerification/<>c__DisplayClass1_0:<Run>b__0 (bool,string) (at Assets/Editor/FactPipelineVerification.cs:24)
+FactPipelineVerification/<>c__DisplayClass1_1:<Run>b__3 (Fact) (at Assets/Editor/FactPipelineVerification.cs:44)
+AgentFactReceiver:ReceiveFact (Fact) (at Assets/Scripts/AgentFactReceiver.cs:19)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:90)
+
+(Filename: Assets/Editor/FactPipelineVerification.cs Line: 24)
+
+PASS: Mutable fact forwards its target to the strategy
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+FactPipelineVerification/<>c__DisplayClass1_0:<Run>b__0 (bool,string) (at Assets/Editor/FactPipelineVerification.cs:24)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:91)
+
+(Filename: Assets/Editor/FactPipelineVerification.cs Line: 24)
+
+PASS: Null facts rejected
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+FactPipelineVerification/<>c__DisplayClass1_0:<Run>b__0 (bool,string) (at Assets/Editor/FactPipelineVerification.cs:24)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:94)
+
+(Filename: Assets/Editor/FactPipelineVerification.cs Line: 24)
+
+FactVerification_unconfigured: Assign an AI component implementing IFactStrategy before receiving facts.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object,UnityEngine.Object)
+UnityEngine.Debug:LogWarning (object,UnityEngine.Object)
+Agent_Parent_Script:TryStoreFact (Fact) (at Assets/Scripts/Agent_Parent_Script.cs:26)
+AgentFactReceiver:ReceiveFact (Fact) (at Assets/Scripts/AgentFactReceiver.cs:15)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:99)
+
+(Filename: Assets/Scripts/Agent_Parent_Script.cs Line: 26)
+
+PASS: Missing strategy reports failure without claiming fact was stored
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+FactPipelineVerification/<>c__DisplayClass1_0:<Run>b__0 (bool,string) (at Assets/Editor/FactPipelineVerification.cs:24)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:99)
+
+(Filename: Assets/Editor/FactPipelineVerification.cs Line: 24)
+
+FACT PIPELINE VERIFIED: 16 checks passed.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+FactPipelineVerification:Run () (at Assets/Editor/FactPipelineVerification.cs:101)
+
+(Filename: Assets/Editor/FactPipelineVerification.cs Line: 101)
+
+Batchmode quit successfully invoked - shutting down!
+Importing 'GUID: 0000000000000000b000000000000000 - Path: ProjectSettings/EditorBuildSettings.asset' with importer (LibraryAssetImporter)
+Imported 'GUID: 0000000000000000b000000000000000' -> (Import Result ID: 'd4b59cb060f81ea6461d9015f1520027') in 0.004 seconds [static dependencies only]. Details - ImportResultOutputID=0a89a5c5f492143e0fa186859e17ba6f DependenciesID=c4e1b377361211f441812e41ca991afd StaticDependenciesID=88d454026c6611450154ab0790329a42 
+Refreshing native plugins compatible for Editor in 3.21 ms, found 6 plugins.
+Asset Pipeline Refresh (id=d44d69332d0a65747b8e4af3802b73fa): Total: 0.090 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input Polling Thread exited.
+Input System module state changed to: Shutdown.
+[Licensing::IpcConnector] LicenseClient-Marcelo-notifications channel disconnected successfully.
+[Licensing::IpcConnector] LicenseClient-Marcelo channel disconnected successfully.
+Unity Data Store service was successfully shut down
+UDS shutting down local client system
+Shut down UDS service system complete
+AcceleratorClientConnectionCallback - disconnected - :0
+Cleanup mono
+CodeReloadManager destroyed
+Exiting batchmode successfully now!
+[ExitDontLaunchBugReporter] Exiting without the bug reporter. Application will exit with return code 0

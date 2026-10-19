@@ -35,7 +35,7 @@ public class LeverFactEmitter : MonoBehaviour
             return;
         }
 
-        var fact = new Fact(FactType.LeverActivated, leverId);
+        var fact = new Fact(FactType.LeverActivated, FactLifetime.Permanent, leverId);
         var recipients = new HashSet<AgentFactReceiver>();
         var hits = Physics2D.OverlapCircleAll(
             source.transform.position, observationRadius, agentLayers);
