@@ -196,7 +196,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f618a6b205440074d9cf309d904b34f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Agent_Parent_Script
-  factStrategyComponent: {fileID: 0}
+  strategyComponent: {fileID: -7408870641116324135}
 --- !u!114 &8283964015569472706
 MonoBehaviour:
   m_ObjectHideFlags: 0

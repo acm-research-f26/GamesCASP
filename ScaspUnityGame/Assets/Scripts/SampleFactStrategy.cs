@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-// Attach to an agent and assign it to that agent's Fact Strategy Component field.
+// Attach to an agent and assign it to that agent's Strategy Component field.
 // Temporary in-memory implementation, independent of either production AI backend.
-public class SampleFactStrategy : MonoBehaviour, IFactStrategy
+public class SampleFactStrategy : MonoBehaviour, IAgentStrategy
 {
     private readonly List<Fact> storedFacts = new List<Fact>();
 
@@ -12,6 +12,15 @@ public class SampleFactStrategy : MonoBehaviour, IFactStrategy
     [SerializeField] private List<string> receivedFacts = new List<string>();
 
     public IReadOnlyList<Fact> StoredFacts => storedFacts.AsReadOnly();
+
+    // This sample has no decision backend; waiting exercises the shared executor.
+    public void DecideNextAction(Agent_Parent_Script agent)
+    {
+        if (agent == null)
+            throw new ArgumentNullException(nameof(agent));
+
+        agent.ExecuteAction("wait");
+    }
 
     private void Awake()
     {
@@ -49,6 +58,6 @@ public class SampleFactStrategy : MonoBehaviour, IFactStrategy
 
         if (!receiver.ReceiveFact(new Fact(
             FactType.LeverActivated, FactLifetime.Permanent, "sample_lever")))
-            Debug.LogError("Sample fact failed: assign a Fact Strategy Component on the agent.", this);
+            Debug.LogError("Sample fact failed: assign a Strategy Component on the agent.", this);
     }
 }

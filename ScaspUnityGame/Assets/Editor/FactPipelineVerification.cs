@@ -6,10 +6,18 @@ using UnityEngine;
 // No scene changes: builds and destroys a temporary lever/agent fixture.
 public static class FactPipelineVerification
 {
-    private sealed class RecordingStrategy : IFactStrategy
+    private sealed class RecordingStrategy : IAgentStrategy
     {
         public readonly List<Fact> Facts = new List<Fact>();
+        public Agent_Parent_Script LastAgent;
+        public int Decisions;
         public void StoreFact(Fact fact) => Facts.Add(fact);
+        public void DecideNextAction(Agent_Parent_Script agent)
+        {
+            LastAgent = agent;
+            Decisions++;
+            agent.ExecuteAction("pull_lever", Facts.Count > 0 ? Facts[0].SubjectId : "lever1");
+        }
     }
 
     [MenuItem("Tools/Facts/Verify Draft Pipeline")]
@@ -98,6 +106,63 @@ public static class FactPipelineVerification
             unconfigured.FactReceived += _ => falseNotifications++;
             check(!unconfigured.ReceiveFact(fact) && falseNotifications == 0,
                 "Missing strategy reports failure without claiming fact was stored");
+
+            var parent = near.GetComponent<Agent_Parent_Script>();
+            var decisionLogs = CaptureLogs(parent.RequestDecision);
+            check(nearStrategy.Decisions == 1 && nearStrategy.LastAgent == parent &&
+                  decisionLogs.Contains($"{parent.name}: Pull lever lever1"),
+                "The backend that receives facts chooses an action for the same agent");
+            Expect<ArgumentNullException>(() => parent.SetStrategy(null));
+            check(true, "Null strategy rejected");
+
+            var inspectorObject = Make(objects, "inspector", origin);
+            var inspectorAgent = inspectorObject.AddComponent<Agent_Parent_Script>();
+            var sample = inspectorObject.AddComponent<SampleFactStrategy>();
+            var agentSettings = new SerializedObject(inspectorAgent);
+            agentSettings.FindProperty("strategyComponent").objectReferenceValue = sample;
+            agentSettings.ApplyModifiedPropertiesWithoutUndo();
+            check(inspectorAgent.TryStoreFact(fact) && sample.StoredFacts.Count == 1 &&
+                  CaptureLogs(inspectorAgent.RequestDecision).Contains($"{inspectorAgent.name}: Wait"),
+                "Inspector component receives both facts and decisions");
+
+            var replacement = new RecordingStrategy();
+            inspectorAgent.SetStrategy(replacement);
+            inspectorAgent.TryStoreFact(fact);
+            CaptureLogs(inspectorAgent.RequestDecision);
+            check(replacement.Facts.Count == 1 && replacement.Decisions == 1 &&
+                  sample.StoredFacts.Count == 1,
+                "Runtime strategy overrides Inspector assignment for facts and decisions together");
+
+            var noStrategy = unconfigured.GetComponent<Agent_Parent_Script>();
+            check(CaptureLogs(noStrategy.RequestDecision).Exists(message => message.Contains("Assign an AI component")),
+                "Missing strategy warns on decision requests without throwing");
+            var invalidSettings = new SerializedObject(noStrategy);
+            invalidSettings.FindProperty("strategyComponent").objectReferenceValue = unconfigured;
+            invalidSettings.ApplyModifiedPropertiesWithoutUndo();
+            check(!noStrategy.TryStoreFact(fact) &&
+                  CaptureLogs(noStrategy.RequestDecision).Exists(message => message.Contains("Assign an AI component")),
+                "Component without IAgentStrategy cannot receive facts or decisions");
+
+            var actions = new[] { "run_from", "hold_barricade", "move_to_barricade", "pull_lever",
+                "move_to_lever", "hunt_lever", "wait" };
+            var messages = new[] { "Run from target1", "Hold barricade target1", "Move to barricade target1",
+                "Pull lever target1", "Move to lever target1", "Hunt for lever", "Wait" };
+            for (int i = 0; i < actions.Length; i++)
+            {
+                int index = i;
+                check(CaptureLogs(() => noStrategy.ExecuteAction(actions[index], "target1"))
+                      .Contains($"{noStrategy.name}: {messages[index]}"),
+                    "Shared executor dispatches " + actions[i] + " independently of the strategy");
+            }
+            check(CaptureLogs(() => noStrategy.ExecuteAction("unknown"))
+                  .Contains($"{noStrategy.name}: Unknown action 'unknown'"),
+                "Unknown actions warn without executing a known action");
+
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/prefabs/Survivor1.prefab");
+            var prefabAgent = prefab.GetComponent<Agent_Parent_Script>();
+            var prefabSettings = new SerializedObject(prefabAgent);
+            check(prefabSettings.FindProperty("strategyComponent").objectReferenceValue ==
+                  prefab.GetComponent<SampleFactStrategy>(), "Survivor prefab has its sample strategy assigned");
             Debug.Log($"FACT PIPELINE VERIFIED: {checks} checks passed.");
         }
         finally
@@ -122,7 +187,7 @@ public static class FactPipelineVerification
         obj.layer = layer;
         var receiver = obj.AddComponent<AgentFactReceiver>();
         strategy = new RecordingStrategy();
-        obj.GetComponent<Agent_Parent_Script>().SetFactStrategy(strategy);
+        obj.GetComponent<Agent_Parent_Script>().SetStrategy(strategy);
         obj.AddComponent<CircleCollider2D>();
         return receiver;
     }
@@ -140,5 +205,15 @@ public static class FactPipelineVerification
         try { action(); }
         catch (T) { return; }
         throw new Exception("Expected " + typeof(T).Name);
+    }
+
+    private static List<string> CaptureLogs(Action action)
+    {
+        var messages = new List<string>();
+        Application.LogCallback capture = (message, stack, type) => messages.Add(message);
+        Application.logMessageReceived += capture;
+        try { action(); }
+        finally { Application.logMessageReceived -= capture; }
+        return messages;
     }
 }
