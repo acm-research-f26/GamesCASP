@@ -12,7 +12,11 @@ GameObject:
   - component: {fileID: 5866620943793040209}
   - component: {fileID: 3211305354672300712}
   - component: {fileID: 3458843057760476701}
-  - component: {fileID: 8066510283413265700}
+  - component: {fileID: 7722836637977424976}
+  - component: {fileID: 4180092995283551806}
+  - component: {fileID: 477217731706614787}
+  - component: {fileID: 2728016071441532600}
+  - component: {fileID: 7207211578970807734}
   m_Layer: 0
   m_Name: playerPrefab
   m_TagString: Player
@@ -173,7 +177,7 @@ PolygonCollider2D:
       - {x: 0.5, y: -0.5}
       - {x: 0.5, y: 0.5}
   m_UseDelaunayMesh: 1
---- !u!114 &8066510283413265700
+--- !u!114 &7722836637977424976
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -182,11 +186,74 @@ MonoBehaviour:
   m_GameObject: {fileID: 8838343777709214332}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6989dd4dafc594b43bf8b590b9417df1, type: 3}
+  m_Script: {fileID: 11500000, guid: 600286fe85abea14e8e1d51a37e7c6b7, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Player
-  health: 0
-  role: 
-  moveSpeed: 0
-  targetPosX: 0
-  targetPosY: 0
+  m_EditorClassIdentifier: Assembly-CSharp::Agent
+  strategyComponent: {fileID: 0}
+  health: 3
+  role: innocent
+--- !u!114 &4180092995283551806
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8838343777709214332}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99e10d22b49852d48bcb95ce312b9232, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AiAction
+  moveSpeed: 1
+  fleeDistance: 5
+  interactionRange: 1
+  detectionRange: 5
+  detectedObjects: []
+--- !u!114 &477217731706614787
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8838343777709214332}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e328c4436939e5c45b7285099cce3d8a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ScaspStrategy
+  client: {fileID: 0}
+  actorId: player1
+  leversToWin: 3
+  requestTimeout: 35
+--- !u!114 &2728016071441532600
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8838343777709214332}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0783426e6f0cfa742a2577b9d8a74bcb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ScaspClient
+  serverUrl: ws://localhost:6767
+  onAction:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &7207211578970807734
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8838343777709214332}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0783426e6f0cfa742a2577b9d8a74bcb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ScaspClient
+  serverUrl: ws://localhost:6767
+  onAction:
+    m_PersistentCalls:
+      m_Calls: []

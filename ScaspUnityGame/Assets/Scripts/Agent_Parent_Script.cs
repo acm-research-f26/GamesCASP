@@ -1,21 +1,32 @@
 using UnityEngine;
 using UnityEngine.Serialization;
 
+[RequireComponent(typeof(AiAction))]
+
 public class Agent_Parent_Script : MonoBehaviour
 {
-    [Tooltip("This agent's AI component. Must implement IAgentStrategy.")]
+    [Header("AI Strategy")]
+    [Tooltip("Must implement IAgentStrategy.")]
     [FormerlySerializedAs("factStrategyComponent")]
     [SerializeField] private MonoBehaviour strategyComponent;
+
+
     private IAgentStrategy runtimeStrategy;
+    private AiAction aiAction;
+    private IAgentStrategy Strategy => runtimeStrategy ?? (strategyComponent as IAgentStrategy) ?? GetComponent<IAgentStrategy>();
+
+
+    private void Awake()
+    {
+        aiAction = GetComponent<AiAction>();
+    }
+
 
     // Supports strategies created by code as well as components assigned in the Inspector.
     public void SetStrategy(IAgentStrategy strategy)
     {
         runtimeStrategy = strategy ?? throw new System.ArgumentNullException(nameof(strategy));
     }
-
-    private IAgentStrategy Strategy =>
-        runtimeStrategy ?? (strategyComponent as IAgentStrategy);
 
     // The caller controls decision timing. Asynchronous backends may execute later.
     public void RequestDecision()
@@ -48,16 +59,9 @@ public class Agent_Parent_Script : MonoBehaviour
         return true;
     }
 
-    // Delegate action selection over to AIStrategy script
+    // AiAction handles NPC actions now
     public virtual void ExecuteAction(string action, string target = "")
     {
-        if (aiStrategy == null)
-        {
-            Debug.LogWarning($"{name}: No AI strategy assigned.", this);
-            return;
-        }
-
-        // Let AI Strategy execute actions for the NPC
-        aiStrategy.ExecuteAction(action, target);
+        aiAction.Execute(action, target);
     }
 }
