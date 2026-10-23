@@ -222,22 +222,19 @@ public class AiAction : MonoBehaviour
         if (barricade == null)
         {
             Debug.LogWarning(
-                $"{name}: Barricade/window '{target}' not detected within range {detectionRange}.", this);
+                $"{name}: Barricade '{target}' not detected.");
             return;
         }
 
-        // Stop nearby instead of moving into the barricade's center.
         MoveToObject(barricade, interactionRange);
     }
 
-    // Move a short distance away from the barricade.
     protected virtual void LeaveBarricade(string target)
     {
         GameObject barricade = FindNearest("Barricade", target);
 
         if (barricade == null)
         {
-            Debug.LogWarning($"{name}: No detected barricade to leave.", this);
             return;
         }
 
@@ -288,7 +285,6 @@ public class AiAction : MonoBehaviour
         SearchForLever();
     }
 
-    // Search for a barricade, wandering until one is detected.
     protected virtual void HuntBarricade()
     {
         isSearchingForBarricade = true;
@@ -386,7 +382,6 @@ public class AiAction : MonoBehaviour
                         break;
                     }
 
-                    // Keep support for older name-based barricades.
                     if (!detected.obj.name.StartsWith("barricade", System.StringComparison.OrdinalIgnoreCase))
                         continue;
 
