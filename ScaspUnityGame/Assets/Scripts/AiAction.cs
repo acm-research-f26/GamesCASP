@@ -7,6 +7,7 @@ public class AiAction : MonoBehaviour
     public float moveSpeed = 1f;
     public float fleeDistance = 5f;
     public float interactionRange = 1f;
+    public float leaveBarricadeDistance = 2f;
 
     [Header("Detection")]
     public float detectionRange = 5f;
@@ -32,7 +33,9 @@ public class AiAction : MonoBehaviour
     private GameObject movementTarget;
     private bool isMoving;
     private bool isSearchingForLever;
+    private bool isSearchingForBarricade;
     private float stoppingDistance;
+    private float nextWanderTime;
 
     private void Awake()
     {
@@ -46,6 +49,11 @@ public class AiAction : MonoBehaviour
         if (isSearchingForLever)
         {
             SearchForLever();
+        }
+
+        if (isSearchingForBarricade)
+        {
+            SearchForBarricade();
         }
 
         UpdateMovement();
@@ -75,7 +83,9 @@ public class AiAction : MonoBehaviour
     // Execute the action selected by the AI strategy.
     public void Execute(string action, string target = "")
     {
+        DetectObjects();
         isSearchingForLever = false;
+        isSearchingForBarricade = false;
         StopMovement();
 
         switch (action)
@@ -92,6 +102,10 @@ public class AiAction : MonoBehaviour
                 MoveToBarricade(target);
                 break;
 
+            case "leave_barricade":
+                LeaveBarricade(target);
+                break;
+
             case "pull_lever":
                 PullLever(target);
                 break;
@@ -102,6 +116,10 @@ public class AiAction : MonoBehaviour
 
             case "hunt_lever":
                 HuntLever();
+                break;
+
+            case "hunt_barricade":
+                HuntBarricade();
                 break;
 
             case "wait":
@@ -204,11 +222,30 @@ public class AiAction : MonoBehaviour
         if (barricade == null)
         {
             Debug.LogWarning(
-                $"{name}: Barricade '{target}' not detected.");
+                $"{name}: Barricade/window '{target}' not detected within range {detectionRange}.", this);
             return;
         }
 
+        // Stop nearby instead of moving into the barricade's center.
         MoveToObject(barricade, interactionRange);
+    }
+
+    // Move a short distance away from the barricade.
+    protected virtual void LeaveBarricade(string target)
+    {
+        GameObject barricade = FindNearest("Barricade", target);
+
+        if (barricade == null)
+        {
+            Debug.LogWarning($"{name}: No detected barricade to leave.", this);
+            return;
+        }
+
+        Vector2 direction = transform.position - barricade.transform.position;
+        if (direction.sqrMagnitude < 0.01f)
+            direction = Vector2.right;
+
+        MoveToPosition((Vector2)transform.position + direction.normalized * leaveBarricadeDistance);
     }
 
     // Activate the specified lever.
@@ -250,6 +287,14 @@ public class AiAction : MonoBehaviour
         isSearchingForLever = true;
         SearchForLever();
     }
+
+    // Search for a barricade, wandering until one is detected.
+    protected virtual void HuntBarricade()
+    {
+        isSearchingForBarricade = true;
+        SearchForBarricade();
+    }
+
     private void StopMovement()
     {
         isMoving = false;
@@ -268,7 +313,24 @@ public class AiAction : MonoBehaviour
             return;
         }
 
-        if (!isMoving || Vector2.Distance(transform.position, targetPosition) < 0.2f)
+        if (!isMoving || Time.time >= nextWanderTime || Vector2.Distance(transform.position, targetPosition) < 0.2f)
+        {
+            Wander();
+        }
+    }
+
+    private void SearchForBarricade()
+    {
+        GameObject barricade = FindNearest("Barricade");
+
+        if (barricade != null)
+        {
+            isSearchingForBarricade = false;
+            MoveToBarricade(barricade.name);
+            return;
+        }
+
+        if (!isMoving || Time.time >= nextWanderTime || Vector2.Distance(transform.position, targetPosition) < 0.2f)
         {
             Wander();
         }
@@ -317,7 +379,14 @@ public class AiAction : MonoBehaviour
                     break;
 
                 case "Barricade":
-                    // Temporary name-based lookup until barricade components are integrated.
+                    Window window = detected.obj.GetComponentInParent<Window>();
+                    if (window != null)
+                    {
+                        candidate = window.gameObject;
+                        break;
+                    }
+
+                    // Keep support for older name-based barricades.
                     if (!detected.obj.name.StartsWith("barricade", System.StringComparison.OrdinalIgnoreCase))
                         continue;
 
@@ -354,6 +423,7 @@ public class AiAction : MonoBehaviour
         Vector2 wanderPosition = (Vector2)transform.position + randomDirection * detectionRange;
 
         MoveToPosition(wanderPosition);
+        nextWanderTime = Time.time + 3f;
     }
 
     // Visualize NPC detection range in the Unity editor.
