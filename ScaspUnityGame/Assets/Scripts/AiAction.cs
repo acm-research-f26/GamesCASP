@@ -72,6 +72,25 @@ public class AiAction : MonoBehaviour
         }
     }
 
+    // Query physics now, independently of MonoBehaviour Update ordering.
+    public IReadOnlyList<Fact> FetchTransientFacts()
+    {
+        DetectObjects();
+        var facts = new List<Fact>();
+        var seen = new HashSet<Zombie>();
+        foreach (var detected in detectedObjects)
+        {
+            if (detected.obj == null)
+                continue;
+            var zombie = detected.obj.GetComponentInParent<Zombie>();
+            if (zombie == null || !zombie.isActiveAndEnabled || !seen.Add(zombie))
+                continue;
+            facts.Add(new Fact(FactType.ZombieSeen, FactLifetime.Transient, zombie.name,
+                distance: Vector2.Distance(transform.position, zombie.transform.position)));
+        }
+        return facts.AsReadOnly();
+    }
+
     // Execute the action selected by the AI strategy.
     public void Execute(string action, string target = "")
     {

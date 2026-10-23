@@ -13,6 +13,8 @@ public class SampleFactStrategy : MonoBehaviour, IAgentStrategy
 
     public IReadOnlyList<Fact> StoredFacts => storedFacts.AsReadOnly();
 
+    public IReadOnlyList<Fact> FetchTransientFacts() => GetComponent<AiAction>().FetchTransientFacts();
+
     // This sample has no decision backend; waiting exercises the shared executor.
     public void DecideNextAction(Agent_Parent_Script agent)
     {
