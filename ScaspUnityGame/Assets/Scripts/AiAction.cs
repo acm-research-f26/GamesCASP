@@ -4,7 +4,7 @@ using UnityEngine;
 public class AiAction : MonoBehaviour
 {
     [Header("Movement")]
-    public float moveSpeed = 1f;
+    public float moveSpeed = 2.2f;
     public float fleeDistance = 5f;
     public float interactionRange = 1f;
 
