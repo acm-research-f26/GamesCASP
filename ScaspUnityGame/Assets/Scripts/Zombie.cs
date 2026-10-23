@@ -2,37 +2,49 @@ using UnityEngine;
 
 public class Zombie : MonoBehaviour
 {
+    [Header("Movement")]
     public float moveSpeed = 2f;
+
+    [Header("Combat")]
     public float attackRange = 1f;
     public float attackCooldown = 1f;
 
+    [Header("References")]
     public PlayerManager playerManager;
 
-    private Player player;
+    private Agent targetAgent;
     private SpriteRenderer spriteRenderer;
     private float lastAttackTime = 0f;
 
-    void Start()
+    private void Start()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
-        playerManager = FindFirstObjectByType<PlayerManager>();
+
+        if (playerManager == null)
+            playerManager = FindAnyObjectByType<PlayerManager>();
+
+        if (playerManager == null)
+            Debug.LogError($"{name}: PlayerManager not found.", this);
     }
 
-    void Update()
+    private void Update()
     {
-        player = nearestPlayer();
-        if (player == null)
+        if (playerManager == null)
             return;
 
-        Vector3 dir = player.transform.position - transform.position;
+        targetAgent = NearestAgent();
 
-        if (dir.x < 0)
+        if (targetAgent == null)
+            return;
+
+        Vector3 dir = targetAgent.transform.position - transform.position;
+
+        if (spriteRenderer != null)
         {
-            spriteRenderer.flipX = true;
-        }
-        else if (dir.x > 0)
-        {
-            spriteRenderer.flipX = false;
+            if (dir.x < 0)
+                spriteRenderer.flipX = true;
+            else if (dir.x > 0)
+                spriteRenderer.flipX = false;
         }
 
         float distance = dir.magnitude;
@@ -41,30 +53,37 @@ public class Zombie : MonoBehaviour
         {
             transform.position += dir.normalized * moveSpeed * Time.deltaTime;
         }
-        else
+        else if (Time.time > lastAttackTime + attackCooldown)
         {
-            if (Time.time > lastAttackTime + attackCooldown)
-            {
-                Debug.Log("Zombie attacks!");
-                lastAttackTime = Time.time;
-            }
+            Debug.Log($"{name} attacks {targetAgent.name}!");
+
+            lastAttackTime = Time.time;
+
+            // TODO: Apply damage to Agent using SetHealth().
         }
     }
 
-    Player nearestPlayer()
+    // Find the nearest living innocent NPC.
+    private Agent NearestAgent()
     {
-        float nearestDistance = 1000f;
-        Player nearestPlayer = null;
+        float nearestDistance = float.MaxValue;
+        Agent nearestAgent = null;
 
-        foreach (Player player in playerManager.players)
+        foreach (Agent agent in playerManager.players)
         {
-            float distance = Vector3.Distance(transform.position, player.transform.position);
+            if (agent == null || agent.Health <= 0)
+                continue;
+
+            float distance = Vector3.Distance(transform.position, agent.transform.position);
+
             if (distance < nearestDistance)
             {
                 nearestDistance = distance;
-                nearestPlayer = player;
+                nearestAgent = agent;
             }
         }
-        return nearestPlayer;
+
+        return nearestAgent;
     }
 }
+

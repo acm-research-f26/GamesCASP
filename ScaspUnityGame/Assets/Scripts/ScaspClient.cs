@@ -4,21 +4,31 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 using UnityEngine;
 using UnityEngine.Events;
 
 // Attach to an active GameObject. Intended for Unity Editor and desktop players.
 public class ScaspClient : MonoBehaviour
 {
+    [Header("s(CASP) Server")]
     [SerializeField] private string serverUrl = "ws://localhost:6767";
+    [Header("Original AI Events")]
     [SerializeField] private UnityEvent<string> onAction = new UnityEvent<string>();
 
     private ClientWebSocket socket;
     private CancellationTokenSource lifetime;
     private readonly SemaphoreSlim sendLock = new SemaphoreSlim(1, 1);
 
+    // Queue responses for processing on Unity's main thread
+    private readonly ConcurrentQueue<string> responseQueue = new ConcurrentQueue<string>();
+
     public bool IsConnected => socket != null && socket.State == WebSocketState.Open;
     public UnityEvent<string> OnAction => onAction;
+
+    // NPC specific action event
+    // Parameters are actor, action, target
+    public event Action<string, string, string> NpcActionReceived;
 
     [Serializable]
     private class Request
@@ -26,6 +36,9 @@ public class ScaspClient : MonoBehaviour
         public string request_type;
         public string message_type;
         public string culprit;
+        // NPC-specific request fields
+        public string actor;
+        public NpcState state;
     }
 
     [Serializable]
@@ -35,6 +48,10 @@ public class ScaspClient : MonoBehaviour
         public string[] possible_actions;
         public string error;
         public string detail;
+        // NPC-specific response fields
+        public string actor;
+        public string action;
+        public string target;
     }
 
     private async void Start()
@@ -53,7 +70,7 @@ public class ScaspClient : MonoBehaviour
                 await socket.ConnectAsync(new Uri(serverUrl), connectTimeout.Token);
             }
             Debug.Log("s(CASP) connected: " + serverUrl, this);
-            await SendAsync(new Request { request_type = "get_action" });
+            //await SendAsync(new Request { request_type = "get_action" });
             await ReceiveLoopAsync(lifetime.Token);
         }
         catch (Exception exception)
@@ -76,13 +93,21 @@ public class ScaspClient : MonoBehaviour
         SendRequest(new Request { request_type = "get_action" });
     }
 
+    // Request a specific NPC's next action
+    public void RequestNpcDecision(string actor, NpcState state)
+    {
+        if (string.IsNullOrWhiteSpace(actor) || state == null)
+        {
+            Debug.LogError("NPC decision requires an actor and state.", this);
+            return;
+        }
+
+        SendRequest(new Request {request_type = "npc_decision", actor = actor, state = state});
+    }
     // Sends a fact, then requests the action for the updated world state.
     public void ReportFact(string eventName, string culprit = null)
     {
-        SendRequest(new Request
-        {
-            request_type = "fact", message_type = eventName, culprit = culprit
-        }, true);
+        SendRequest(new Request {request_type = "fact", message_type = eventName, culprit = culprit}, true);
     }
 
     [ContextMenu("Report Heard Noise (Play Mode)")]
@@ -131,6 +156,49 @@ public class ScaspClient : MonoBehaviour
         return socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, token);
     }
 
+    // Process server responses on Unity's main thread
+    private void Update()
+    {
+        while (responseQueue.TryDequeue(out string json))
+        {
+            Response response;
+
+            try
+            {
+                response = JsonUtility.FromJson<Response>(json);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogError(
+                    "Invalid s(CASP) response: " + exception.Message, this);
+                continue;
+            }
+
+            if (response == null)
+                continue;
+
+            if (response.message_type == "error")
+            {
+                Debug.LogError("s(CASP) " + response.error + ": " + response.detail, this);
+            }
+            else if (response.message_type == "possible_actions" && response.possible_actions != null)
+            {
+                foreach (string action in response.possible_actions)
+                {
+                    Debug.Log("s(CASP) action: " + action, this);
+                    onAction.Invoke(action);
+                }
+            }
+            else if (response.message_type == "npc_action")
+            {
+                Debug.Log($"s(CASP) NPC: {response.actor}, " + $"Action: {response.action}, Target: {response.target}", this);
+
+                NpcActionReceived?.Invoke(response.actor, response.action, response.target);
+            }
+        }
+    }
+
+
     private async Task ReceiveLoopAsync(CancellationToken token)
     {
         var buffer = new byte[4096];
@@ -154,10 +222,22 @@ public class ScaspClient : MonoBehaviour
                         throw new InvalidDataException("Server message exceeds 1 MiB.");
                 } while (!result.EndOfMessage);
 
+
+                string json = Encoding.UTF8.GetString(message.ToArray());
+
+                // Queue raw JSON for deserialization on Unity's main thread.
+                responseQueue.Enqueue(json);
+
+                /*
                 string json = Encoding.UTF8.GetString(message.ToArray());
                 var response = JsonUtility.FromJson<Response>(json);
                 if (response == null)
                     throw new InvalidDataException("Empty server response.");
+                
+                // Queue the response for processing in Update()
+                responseQueue.Enqueue(response);
+                
+                
                 if (response.message_type == "error")
                     Debug.LogError("s(CASP) " + response.error + ": " + response.detail, this);
                 else if (response.message_type == "possible_actions" && response.possible_actions != null)
@@ -168,6 +248,7 @@ public class ScaspClient : MonoBehaviour
                         onAction.Invoke(action);
                     }
                 }
+                */
             }
         }
     }

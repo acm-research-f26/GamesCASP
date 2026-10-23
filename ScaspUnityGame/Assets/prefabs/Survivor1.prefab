@@ -13,6 +13,9 @@ GameObject:
   - component: {fileID: 995871076971435965}
   - component: {fileID: 537081427953948567}
   - component: {fileID: 951314261913623395}
+  - component: {fileID: 5676735296012211229}
+  - component: {fileID: 8283964015569472706}
+  - component: {fileID: -7408870641116324135}
   m_Layer: 0
   m_Name: Survivor1
   m_TagString: Untagged
@@ -181,3 +184,41 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Survivors
   moveSpeed: 5
+--- !u!114 &5676735296012211229
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8511135424040480818}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f618a6b205440074d9cf309d904b34f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Agent_Parent_Script
+  strategyComponent: {fileID: -7408870641116324135}
+--- !u!114 &8283964015569472706
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8511135424040480818}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 79b442db85c746869ed933435cb64412, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AgentFactReceiver
+--- !u!114 &-7408870641116324135
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8511135424040480818}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 98e621c918834fc7a09e92519f4716a4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SampleFactStrategy
+  receivedFacts: []

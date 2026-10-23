@@ -6970,8 +6970,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70f441913240a724eb3613fff4eca801, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerManager
-  players: []
+  spawnSpacing: 2
+  spawnPosition: {x: 0, y: 0}
   playerPrefab: {fileID: 8838343777709214332, guid: 33ba18699b53c1a4e91eac3dafd22ced, type: 3}
+  players: []
 --- !u!1 &2109457412
 GameObject:
   m_ObjectHideFlags: 0
