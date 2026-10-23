@@ -2,6 +2,7 @@ services:
   gamescasp:
     build: .
     container_name: gamescasp
+    command: ["python3", "-u", "SocketHandler.py"]
     ports:
       - "6767:6767"
     volumes:
