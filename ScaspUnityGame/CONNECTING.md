@@ -1,5 +1,36 @@
 # Connect Unity to the Python server
 
+From PowerShell at the repository root, start the playtest environment with:
+
+```powershell
+.\Start-Playtest.ps1
+```
+
+The launcher starts Docker Desktop if needed, builds/starts the Python server with
+s(CASP) in the background, waits for port 6767, and opens the project's matching
+Unity Editor unless a project lock already exists. In Unity, open the Main scene,
+enter Play Mode, and click **Start Game**. If Play Mode was already running when
+the server started, restart Play Mode so the clients reconnect.
+
+Use `.\Start-Playtest.ps1 -NoUnity` for the server alone. For a custom Editor
+installation, pass `-UnityEditorPath 'C:\path\to\Unity.exe'`. The script resolves
+project paths relative to itself, so it also works when invoked from another directory.
+It checks that the server's TCP port opens; this is not a solver round-trip test.
+
+```powershell
+# Follow server output (Ctrl+C stops following logs; the server stays running).
+docker compose -f DockerServer/docker-compose.yml logs -f gamescasp
+
+# Stop the server when finished.
+docker compose -f DockerServer/docker-compose.yml stop gamescasp
+
+# Reset the shared game session by restarting the server.
+docker compose -f DockerServer/docker-compose.yml restart gamescasp
+```
+
+Rerunning the launcher reuses the existing server when its image/configuration has
+not changed. Restart the server explicitly when you need fresh session facts.
+
 The server uses text JSON over WebSockets on port 6767. `Assets/Scripts/ScaspClient.cs`
 is a reusable component for the Unity Editor and desktop players; no extra package is required.
 
