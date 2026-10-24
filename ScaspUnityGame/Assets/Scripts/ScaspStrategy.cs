@@ -122,6 +122,8 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
         decisionQueued = true;
     }
 
+    public IReadOnlyList<Fact> FetchTransientFacts() => aiAction.FetchTransientFacts();
+
     // IFactStrategy: store received facts locally.
     public void StoreFact(Fact fact)
     {
@@ -168,6 +170,7 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
     // Convert Unity's current world state into the Python request format.
     private NpcState BuildNpcState()
     {
+        var transientFacts = FetchTransientFacts();
         GameObject[] allLevers = System.Array.ConvertAll(FindObjectsByType<LeverScript>(FindObjectsSortMode.None), lever => lever.gameObject);
         GameObject[] allZombies = System.Array.ConvertAll(FindObjectsByType<Zombie>(FindObjectsSortMode.None), zombie => zombie.gameObject);
 
@@ -220,21 +223,21 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
         }
 
         // Collect nearby detected zombies.
-        foreach (GameObject zombie in allZombies)
+        foreach (Fact observation in transientFacts)
         {
-            if (!visibleObjects.Contains(zombie))
+            if (observation.Type != FactType.ZombieSeen)
                 continue;
 
-            if (!IsValidAtom(zombie.name))
+            if (!IsValidAtom(observation.SubjectId))
             {
-                Debug.LogError($"{name}: Invalid Prolog zombie ID '{zombie.name}'.", this);
+                Debug.LogError($"{name}: Invalid Prolog zombie ID '{observation.SubjectId}'.", this);
                 return null;
             }
 
             zombies.Add(new NpcZombieState
             {
-                id = zombie.name,
-                distance = Vector2.Distance(transform.position, zombie.transform.position)
+                id = observation.SubjectId,
+                distance = observation.Distance.Value
             });
         }
 

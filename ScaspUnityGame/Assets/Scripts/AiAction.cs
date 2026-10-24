@@ -4,7 +4,7 @@ using UnityEngine;
 public class AiAction : MonoBehaviour
 {
     [Header("Movement")]
-    public float moveSpeed = 1f;
+    public float moveSpeed = 2.2f;
     public float fleeDistance = 5f;
     public float interactionRange = 1f;
     public float leaveBarricadeDistance = 2f;
@@ -29,6 +29,14 @@ public class AiAction : MonoBehaviour
 
     public List<DetectedObject> detectedObjects = new List<DetectedObject>();
 
+    [Header("Transient Query Debug (Play Mode)")]
+    [Tooltip("Number of transient queries since this agent's Awake, including empty results.")]
+    [SerializeField] private int transientQueryCount;
+    [Tooltip("Game time of the last query. -1 means no query yet.")]
+    [SerializeField] private float lastTransientQueryTime = -1f;
+    [Tooltip("Fact count from the last query; updated only when facts are fetched.")]
+    [SerializeField] private int lastTransientFactCount;
+
     private Vector2 targetPosition;
     private GameObject movementTarget;
     private bool isMoving;
@@ -40,6 +48,9 @@ public class AiAction : MonoBehaviour
     private void Awake()
     {
         targetPosition = transform.position;
+        transientQueryCount = 0;
+        lastTransientQueryTime = -1f;
+        lastTransientFactCount = 0;
     }
 
     private void Update()
@@ -78,6 +89,30 @@ public class AiAction : MonoBehaviour
 
             detectedObjects.Add(new DetectedObject(col.gameObject, distance, angle));
         }
+    }
+
+    // Query physics now, independently of MonoBehaviour Update ordering.
+    public IReadOnlyList<Fact> FetchTransientFacts()
+    {
+        transientQueryCount++;
+        lastTransientQueryTime = Time.time;
+        Debug.Log($"{name}: FetchTransientFacts called at {Time.time:F2}s", this);
+        DetectObjects();
+        var facts = new List<Fact>();
+        var seen = new HashSet<Zombie>();
+        foreach (var detected in detectedObjects)
+        {
+            if (detected.obj == null)
+                continue;
+            var zombie = detected.obj.GetComponentInParent<Zombie>();
+            if (zombie == null || !zombie.isActiveAndEnabled || !seen.Add(zombie))
+                continue;
+            facts.Add(new Fact(FactType.ZombieSeen, FactLifetime.Transient, zombie.name,
+                distance: Vector2.Distance(transform.position, zombie.transform.position)));
+        }
+        lastTransientFactCount = facts.Count;
+        Debug.Log($"{name}: Found {facts.Count} transient facts", this);
+        return facts.AsReadOnly();
     }
 
     // Execute the action selected by the AI strategy.

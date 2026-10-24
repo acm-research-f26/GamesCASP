@@ -18,7 +18,55 @@ Radius is the current observation rule; walls do not block delivery. Multiple co
 
 The game loop calls `Agent_Parent_Script.RequestDecision()` when a decision is needed. The same strategy that receives facts handles that request and calls `agent.ExecuteAction(action, target)` with its choice. An asynchronous backend can do this when its response arrives. Decision requests are not automatically scheduled. Shared execution stays in the parent's overridable action methods; these currently log actions, as before the delegation refactor. `SampleFactStrategy` stores facts in memory and chooses `wait`; production behavior-tree and s(CASP) adapters remain future work.
 
-## Verification
+## Transient queries (issue #18)
+
+Every `IAgentStrategy` now implements `IReadOnlyList<Fact> FetchTransientFacts()`.
+It returns a fresh snapshot of current observations, with an empty collection when
+nothing is observed. It must never return null, stored facts, or null entries.
+`Agent_Parent_Script.FetchTransientFacts()` uses the same configured backend as
+storage and decisions, validates the lifetime, and copies the result into a read-only
+snapshot. A missing strategy warns and returns an empty result.
+
+Select observers explicitly; the query does not discover agents or hardcode identities:
+
+```csharp
+var observations = Fact.FetchTransientFacts(new[] { firstAgent, secondAgent });
+foreach (var fact in observations[firstAgent])
+    Debug.Log($"{fact.SubjectId}: {fact.Distance}");
+```
+
+The result is a read-only dictionary keyed by the requested agent, including agents
+with no observations. Duplicate agents are queried once; null/destroyed references
+are skipped. A null selection throws. Pass the nearby agents, team, or other subset
+appropriate to the caller. This API does not impose sharing or visibility permissions
+between agents; selection belongs to the caller.
+
+Both current strategies delegate to `AiAction` to refresh 2D physics detection at
+query time. Active zombies in detection range yield `ZombieSeen` facts with a
+transient lifetime, the zombie's GameObject name as `SubjectId`, and current 2D
+distance in `Distance` (an optional, nonnegative finite value on `Fact`). Child
+colliders resolve to the zombie root and multiple colliders produce one observation.
+Detection uses the existing radius rule, without wall occlusion. Keep entity names
+unique; s(CASP) also requires valid Prolog atom names. Moving away or disabling the
+zombie removes it from the next query; previous snapshots remain unchanged.
+
+s(CASP)'s NPC request consumes these queried zombie facts. Its other world snapshot
+fields retain their existing collection paths. Queries never call `StoreFact`, emit
+`FactReceived`, or append to persistent memory. Future strategy implementations must
+implement this method; additional transient fact types can use the same format.
+
+Run **Tools > Facts > Verify Transient Queries**, or use the batch command below
+with `-executeMethod TransientFactVerification.Run`. This verifies agent selection,
+snapshot isolation, lifetime boundaries, physics freshness, collider deduplication,
+both current strategies, and s(CASP) request snapshot integration.
+
+Validation on October 23, 2026: game scripts and both verification scripts compile
+against the installed Unity assemblies using Roslyn. The Unity batch run could not
+execute because the Editor reported no valid license; the physics checks above
+remain pending in a licensed Editor. This compilation check does not exercise the
+Python server or an end-to-end decision round trip.
+
+## Stored pipeline verification
 
 Verified with Unity 6000.6.0f1 on October 19, 2026: all 31 checks passed; Unity exited with code 0. The current output is in `Logs/strategy-verification.log` (local, ignored by Git); `../fact-verification.log` is the earlier fact-only run.
 
@@ -32,8 +80,8 @@ The verifier creates temporary objects, invokes the real lever trigger handler, 
 
 ## Remaining issue work
 
-- Add per-agent current transient observations (visibility and distances), queried before decisions. Transient facts deliberately cannot pass through `TryStoreFact`.
-- Add actual damage/attack hooks and additional observation sources. `AgentAttacked` and `ZombieSeen` are vocabulary, not implemented detectors.
+- Extend transient observations beyond current nearby zombies as the game vocabulary grows. Transient facts deliberately cannot pass through `TryStoreFact`.
+- Add actual damage/attack hooks and additional observation sources. `AgentAttacked` remains vocabulary without a damage hook.
 - Agree on backend serialization and observer identity. The owning strategy supplies who knows a fact; subject/target identify the entities in the fact.
 - Wire scene/prefab instances with Samuel, implement both strategy adapters with their owners, and verify actual trigger contacts in Play Mode.
 
