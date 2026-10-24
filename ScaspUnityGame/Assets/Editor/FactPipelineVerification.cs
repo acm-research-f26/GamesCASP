@@ -11,7 +11,6 @@ public static class FactPipelineVerification
         public readonly List<Fact> Facts = new List<Fact>();
         public Agent_Parent_Script LastAgent;
         public int Decisions;
-        public IReadOnlyList<Fact> FetchTransientFacts() => Array.Empty<Fact>();
         public void StoreFact(Fact fact) => Facts.Add(fact);
         public void DecideNextAction(Agent_Parent_Script agent)
         {

@@ -204,7 +204,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 99e10d22b49852d48bcb95ce312b9232, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AiAction
-  moveSpeed: 2.2
+  moveSpeed: 1
   fleeDistance: 5
   interactionRange: 1
   detectionRange: 5

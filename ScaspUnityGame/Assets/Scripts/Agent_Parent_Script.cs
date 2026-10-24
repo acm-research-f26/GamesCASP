@@ -41,26 +41,6 @@ public class Agent_Parent_Script : MonoBehaviour
         strategy.DecideNextAction(this);
     }
 
-    public System.Collections.Generic.IReadOnlyList<Fact> FetchTransientFacts()
-    {
-        var strategy = Strategy;
-        if (strategy == null)
-        {
-            Debug.LogWarning($"{name}: Assign an AI component implementing IAgentStrategy.", this);
-            return System.Array.Empty<Fact>();
-        }
-
-        // Copy the backend result so an earlier query remains a stable snapshot.
-        var facts = strategy.FetchTransientFacts();
-        if (facts == null)
-            throw new System.InvalidOperationException("Strategies must return an empty collection, not null.");
-        var snapshot = new System.Collections.Generic.List<Fact>(facts);
-        foreach (var fact in snapshot)
-            if (fact == null || fact.Lifetime != FactLifetime.Transient)
-                throw new System.InvalidOperationException("Transient queries must return only transient facts.");
-        return snapshot.AsReadOnly();
-    }
-
     public bool TryStoreFact(Fact fact)
     {
         if (fact == null)
