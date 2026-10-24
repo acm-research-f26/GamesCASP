@@ -9,14 +9,15 @@ public class LeverManager : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        winScreen.SetActive(false);
+        if (winScreen != null)
+            winScreen.SetActive(false);
     }
 
     public void LeverActivated()
     {
         activatedLevers++;
 
-        if (activatedLevers >= totalLevers)
+        if (activatedLevers >= totalLevers && winScreen != null)
         {
             winScreen.SetActive(true);
         }
