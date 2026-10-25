@@ -7,5 +7,5 @@ public abstract class Node
     public Blackboard state;
     
     // condition and action nodes will override this method with their own evaluation conditions
-    public abstract bool Tick();
+    public abstract bool Tick(Blackboard state);
 }

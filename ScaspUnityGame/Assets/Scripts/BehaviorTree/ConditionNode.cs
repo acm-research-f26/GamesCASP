@@ -11,13 +11,13 @@ public abstract class ConditionNode : Node
     // condition nodes will override this method with their conditions
     public abstract bool evaluate();
 
-    public override bool Tick()
+    public override bool Tick(Blackboard state)
     {
         if (evaluate())
         {
-            return rightNode.Tick();
+            return rightNode.Tick(state);
         }
 
-        return leftNode.Tick();
+        return leftNode.Tick(state);
     }
 }
