@@ -2143,10 +2143,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 167677301567529572, guid: efabd3739dedb9b49b397c889678d801, type: 3}
-      propertyPath: m_BodyType
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 7477642084044575326, guid: efabd3739dedb9b49b397c889678d801, type: 3}
       propertyPath: m_LocalPosition.x
       value: 6.16
@@ -6771,13 +6767,9 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 995871076971435965, guid: b6b9f1eefefabed46b79c70d34b657db, type: 3}
-      propertyPath: m_BodyType
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 8511135424040480818, guid: b6b9f1eefefabed46b79c70d34b657db, type: 3}
       propertyPath: m_Name
-      value: Survivor1
+      value: Player
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

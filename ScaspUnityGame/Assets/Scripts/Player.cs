@@ -1,30 +1,56 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
-public class Player : Agent_Parent_Script
+public class Player : MonoBehaviour
 {
-    public int health;
-    public string role;
-    public float moveSpeed;
+    public float moveSpeed = 5f;
 
-    public float targetPosX;
-    public float targetPosY;
+    private Rigidbody2D rb;
+    private SpriteRenderer spriteRenderer;
+    private Vector2 movement;
 
-    public void Initialize(string role, float startPosX, float startPosY)
+    void Start()
     {
-        this.health = 3;
-        this.role = role;
-        this.moveSpeed = 1;
-
-        this.targetPosX = startPosX;
-        this.targetPosY = startPosY;
-
-        transform.position = new Vector3(startPosX, startPosY, 0);
+        rb = GetComponent<Rigidbody2D>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
     }
 
     void Update()
     {
-        // move to target pos every frame
-        Vector3 targetPosition = new Vector3(targetPosX, targetPosY, 0);
-        transform.position = Vector3.MoveTowards(transform.position,targetPosition,this.moveSpeed * Time.deltaTime);
+        movement = Vector2.zero;
+
+        if (Keyboard.current == null)
+            return;
+
+        if (Keyboard.current.wKey.isPressed)
+            movement.y += 1f;
+
+        if (Keyboard.current.sKey.isPressed)
+            movement.y -= 1f;
+
+        if (Keyboard.current.aKey.isPressed)
+            movement.x -= 1f;
+
+        if (Keyboard.current.dKey.isPressed)
+            movement.x += 1f;
+
+        movement = movement.normalized;
+
+        if (movement.x < 0f)
+        {
+            spriteRenderer.flipX = true;
+        }
+        else if (movement.x > 0f)
+        {
+            spriteRenderer.flipX = false;
+        }
+    }
+
+    void FixedUpdate()
+    {
+        rb.MovePosition(
+            rb.position + movement * moveSpeed * Time.fixedDeltaTime
+        );
     }
 }
+
