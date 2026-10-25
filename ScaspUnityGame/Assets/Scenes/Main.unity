@@ -2357,11 +2357,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 7477642084044575326, guid: efabd3739dedb9b49b397c889678d801, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 6.16
+      value: 9.34
       objectReference: {fileID: 0}
     - target: {fileID: 7477642084044575326, guid: efabd3739dedb9b49b397c889678d801, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -2.99
+      value: -4.8
       objectReference: {fileID: 0}
     - target: {fileID: 7477642084044575326, guid: efabd3739dedb9b49b397c889678d801, type: 3}
       propertyPath: m_LocalPosition.z
@@ -2397,7 +2397,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8135665798404815180, guid: efabd3739dedb9b49b397c889678d801, type: 3}
       propertyPath: m_Name
-      value: Zomb1
+      value: zomb1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -2890,7 +2890,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1884710367
 MonoBehaviour:
   m_ObjectHideFlags: 0
