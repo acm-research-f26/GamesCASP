@@ -115,6 +115,7 @@ public class MapManager : MonoBehaviour
             position.y *= Random.Range(1, 4);
 
             GameObject lever = Instantiate(leverPrefab, position, Quaternion.identity);
+            lever.name = $"lever_{i + 1}";
             LeverScript leverScript = lever.GetComponent<LeverScript>();
             leverScript.leverManager = leverManager;
             LeverPositions.RemoveAt(index);

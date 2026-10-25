@@ -1,21 +1,32 @@
 using UnityEngine;
 using UnityEngine.Serialization;
 
+[RequireComponent(typeof(AiAction))]
+
 public class Agent_Parent_Script : MonoBehaviour
 {
-    [Tooltip("This agent's AI component. Must implement IAgentStrategy.")]
+    [Header("AI Strategy")]
+    [Tooltip("Must implement IAgentStrategy.")]
     [FormerlySerializedAs("factStrategyComponent")]
     [SerializeField] private MonoBehaviour strategyComponent;
+
+
     private IAgentStrategy runtimeStrategy;
+    private AiAction aiAction;
+    private IAgentStrategy Strategy => runtimeStrategy ?? (strategyComponent as IAgentStrategy) ?? GetComponent<IAgentStrategy>();
+
+
+    private void Awake()
+    {
+        aiAction = GetComponent<AiAction>();
+    }
+
 
     // Supports strategies created by code as well as components assigned in the Inspector.
     public void SetStrategy(IAgentStrategy strategy)
     {
         runtimeStrategy = strategy ?? throw new System.ArgumentNullException(nameof(strategy));
     }
-
-    private IAgentStrategy Strategy =>
-        runtimeStrategy ?? (strategyComponent as IAgentStrategy);
 
     // The caller controls decision timing. Asynchronous backends may execute later.
     public void RequestDecision()
@@ -28,6 +39,26 @@ public class Agent_Parent_Script : MonoBehaviour
         }
 
         strategy.DecideNextAction(this);
+    }
+
+    public System.Collections.Generic.IReadOnlyList<Fact> FetchTransientFacts()
+    {
+        var strategy = Strategy;
+        if (strategy == null)
+        {
+            Debug.LogWarning($"{name}: Assign an AI component implementing IAgentStrategy.", this);
+            return System.Array.Empty<Fact>();
+        }
+
+        // Copy the backend result so an earlier query remains a stable snapshot.
+        var facts = strategy.FetchTransientFacts();
+        if (facts == null)
+            throw new System.InvalidOperationException("Strategies must return an empty collection, not null.");
+        var snapshot = new System.Collections.Generic.List<Fact>(facts);
+        foreach (var fact in snapshot)
+            if (fact == null || fact.Lifetime != FactLifetime.Transient)
+                throw new System.InvalidOperationException("Transient queries must return only transient facts.");
+        return snapshot.AsReadOnly();
     }
 
     public bool TryStoreFact(Fact fact)
@@ -48,16 +79,9 @@ public class Agent_Parent_Script : MonoBehaviour
         return true;
     }
 
-    // Delegate action selection over to AIStrategy script
+    // AiAction handles NPC actions now
     public virtual void ExecuteAction(string action, string target = "")
     {
-        if (aiStrategy == null)
-        {
-            Debug.LogWarning($"{name}: No AI strategy assigned.", this);
-            return;
-        }
-
-        // Let AI Strategy execute actions for the NPC
-        aiStrategy.ExecuteAction(action, target);
+        aiAction.Execute(action, target);
     }
 }
