@@ -25,6 +25,7 @@ async def process_request(request, socket, send_lock):
                 "message_type": "error",
                 "error": "invalid_request",
                 "detail": str(exc),
+                "request_id": request.ctx["json_message"].get("request_id"),
             }))
 
     except (RuntimeError, OSError) as exc:
@@ -35,6 +36,7 @@ async def process_request(request, socket, send_lock):
                 "message_type": "error",
                 "error": "processing_failed",
                 "detail": str(exc),
+                "request_id": request.ctx["json_message"].get("request_id"),
             }))
 
 
