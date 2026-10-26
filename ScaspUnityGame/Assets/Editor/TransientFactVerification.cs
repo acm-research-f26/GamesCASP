@@ -53,17 +53,35 @@ public static class TransientFactVerification
 
             var sample = first.gameObject.AddComponent<SampleFactStrategy>();
             first.SetStrategy(sample);
-            var zombie = Make(objects, "zombie1", 2);
-            zombie.AddComponent<Zombie>();
+            var zombie = Make(objects, "Zomb1", 2);
+            var zombieComponent = zombie.AddComponent<Zombie>();
+            string zombieId = zombieComponent.EntityId;
             zombie.AddComponent<CircleCollider2D>();
             var child = Make(objects, "zombieCollider", 2);
             child.transform.SetParent(zombie.transform, true);
             child.AddComponent<CircleCollider2D>();
             Physics2D.SyncTransforms();
             var observed = first.FetchTransientFacts();
-            check(observed.Count == 1 && observed[0].SubjectId == zombie.name &&
+            check(observed.Count == 1 && observed[0].SubjectId == zombieId &&
                   observed[0].Distance == 2 && observed[0].Lifetime == FactLifetime.Transient,
                 "Sample strategy queries physics and deduplicates child colliders");
+            ScaspFactPayload.ValidateAtom(zombieId, "zombieId");
+            zombie.name = "Zomb1(Clone)";
+            check(first.FetchTransientFacts()[0].SubjectId == zombieId,
+                "Uppercase and clone display names keep a stable Prolog-safe zombie identity");
+            var actionTarget = typeof(AiAction).GetMethod("FindNearest",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .Invoke(first.GetComponent<AiAction>(), new object[] { "Zombie", zombieId, false });
+            check((GameObject)actionTarget == zombie, "Returned zombie action IDs resolve to the observed GameObject");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/prefabs/Zomb1.prefab");
+            var firstClone = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            objects.Add(firstClone);
+            firstClone.transform.position = first.transform.position + Vector3.right * 100;
+            var secondClone = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            objects.Add(secondClone);
+            secondClone.transform.position = first.transform.position + Vector3.right * 110;
+            check(firstClone.GetComponent<Zombie>().EntityId != secondClone.GetComponent<Zombie>().EntityId,
+                "Two instances of the gameplay zombie prefab receive different identities");
             check(sample.StoredFacts.Count == 0, "Observations never enter stored memory");
             zombie.transform.position += Vector3.right * 100;
             Physics2D.SyncTransforms();
@@ -85,7 +103,7 @@ public static class TransientFactVerification
             check(second.FetchTransientFacts().Count == 1, "s(CASP) uses the same observation format");
             var state = (NpcState)typeof(ScaspStrategy).GetMethod("BuildNpcState",
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(scasp, null);
-            check(state != null && state.zombies.Length == 1 && state.zombies[0].id == zombie.name &&
+            check(state != null && state.zombies.Length == 1 && state.zombies[0].id == zombieId &&
                   state.zombies[0].distance == 2, "s(CASP) decision snapshot consumes queried observations");
             Debug.Log($"TRANSIENT FACTS VERIFIED: {checks} checks passed.");
         }

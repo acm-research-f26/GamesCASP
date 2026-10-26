@@ -43,11 +43,12 @@ between agents; selection belongs to the caller.
 
 Both current strategies delegate to `AiAction` to refresh 2D physics detection at
 query time. Active zombies in detection range yield `ZombieSeen` facts with a
-transient lifetime, the zombie's GameObject name as `SubjectId`, and current 2D
+transient lifetime, the zombie's runtime `EntityId` as `SubjectId`, and current 2D
 distance in `Distance` (an optional, nonnegative finite value on `Fact`). Child
 colliders resolve to the zombie root and multiple colliders produce one observation.
-Detection uses the existing radius rule, without wall occlusion. Keep entity names
-unique; s(CASP) also requires valid Prolog atom names. Moving away or disabling the
+Detection uses the existing radius rule, without wall occlusion. Each zombie gets
+a unique Prolog-safe ID that survives display-name changes; action targets resolve
+through that same ID. Moving away or disabling the
 zombie removes it from the next query; previous snapshots remain unchanged.
 
 s(CASP)'s NPC request consumes these queried zombie facts. Its other world snapshot
@@ -106,7 +107,8 @@ receiver-to-Python-file check without Docker or s(CASP).
 
 Validation on October 26, 2026 supersedes the earlier pending Unity execution note:
 the stored Python path passed 12 checks, the existing pipeline passed 31 checks,
-and transient queries passed 11 checks, all in Unity 6000.6.0f1 with exit code 0.
+and transient queries passed 14 checks in Unity 6000.6.0f1. The transient checks
+include prefab clone identity, rename stability, and action target resolution.
 The Python server suite also passed all 12 tests. Storage verification uses the
 actual Python handler and file writes; it does not exercise s(CASP) reasoning.
 

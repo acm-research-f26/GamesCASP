@@ -2,6 +2,10 @@ using UnityEngine;
 
 public class Zombie : MonoBehaviour
 {
+    // Runtime identity stays unique across prefab clones and stable across renames.
+    // It is not serialized, so spawning a prefab creates a new identity.
+    public string EntityId { get; } = "zombie_" + System.Guid.NewGuid().ToString("N");
+
     [Header("Movement")]
     public float moveSpeed = 2f;
 

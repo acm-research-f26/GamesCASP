@@ -101,7 +101,9 @@ event facts and NPC snapshots identify the same lever.
 
 Validated on October 26, 2026: all 12 Python tests passed, and Unity 6000.6.0f1
 completed the Python storage verifier (12 checks), existing fact-pipeline verifier
-(31 checks), and transient-query verifier (11 checks), each with exit code 0.
+(31 checks), and transient-query verifier (14 checks). The transient verifier also
+covers uppercase/clone display names, distinct IDs for real prefab instances, and
+resolving returned zombie action IDs to the observed GameObject.
 This validates storage and snapshot regressions, not new reasoning over stored facts.
 
 ## Watching a gameplay session
@@ -146,7 +148,14 @@ validating the incoming snapshot. A nonempty list proves the observed zombie IDs
 and distances arrived at Python; `[]` means that request had no zombie observations.
 The snapshot is temporary and does not produce transient entries in `facts_temp.pl`.
 Place an active zombie within the NPC's detection range to inspect a nonempty
-snapshot, and use a valid lowercase-leading entity name such as `zombie1`.
+snapshot. Each `Zombie` supplies a unique runtime `EntityId` such as `zombie_<guid>`;
+observations and returned action targets use it. Display names such as `Zomb1` and
+`Zomb1(Clone)` can stay as they are. IDs stay stable for the object's lifetime and
+new prefab instances receive new IDs.
+
+If an older Play Mode session reports `Invalid Prolog zombie ID 'Zomb1'`, stop
+and restart Play Mode after Unity compiles the identity change. The prefab and
+scene display names no longer need to be edited for this path.
 
 Restart the Python server to load new logging code before this check. Restarting
 also resets the stored facts, so do it before sending the mutable test facts.
