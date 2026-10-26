@@ -25,6 +25,11 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
     private float requestStartTime;
 
     private readonly List<Fact> storedFacts = new List<Fact>();
+    private bool sendingStoredFacts;
+    private float nextFactRetryTime;
+
+    // Includes an in-flight fact until Python acknowledges persistence.
+    public int PendingFactCount => storedFacts.Count;
 
     private void Awake()
     {
@@ -41,8 +46,8 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
         if (!IsValidAtom(id))
             throw new ArgumentException("Actor ID must be a valid Prolog atom.", nameof(id));
 
-        if (requestPending)
-            throw new InvalidOperationException("Cannot change actor ID while a decision is pending.");
+        if (requestPending || storedFacts.Count > 0)
+            throw new InvalidOperationException("Cannot change actor ID while decisions or fact writes are pending.");
 
         actorId = id;
     }
@@ -67,6 +72,8 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
 
     private void Update()
     {
+        FlushStoredFacts();
+
         // Detect requests that have not received a response.
         if (requestPending && Time.realtimeSinceStartup - requestStartTime > requestTimeout)
         {
@@ -124,7 +131,7 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
 
     public IReadOnlyList<Fact> FetchTransientFacts() => aiAction.FetchTransientFacts();
 
-    // IFactStrategy: store received facts locally.
+    // IFactStrategy: retain facts locally until Python confirms their storage.
     public void StoreFact(Fact fact)
     {
         if (fact == null)
@@ -133,11 +140,40 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
         if (fact.Lifetime == FactLifetime.Transient)
             throw new ArgumentException("Transient facts cannot be stored.", nameof(fact));
 
+        ScaspFactPayload.ValidateAtom(actorId, nameof(actorId));
+        ScaspFactPayload.FromFact(fact); // Reject invalid IDs before accepting a fact into the queue.
         storedFacts.Add(fact);
+        FlushStoredFacts();
+    }
 
-        // NPC reasoning currently uses live world snapshots.
-        // Persistent event facts are not yet sent to Python.
-        Debug.LogWarning($"{name}: Fact stored locally but not yet included in NPC reasoning.", this);
+    private async void FlushStoredFacts()
+    {
+        if (sendingStoredFacts || !isActiveAndEnabled || storedFacts.Count == 0 ||
+            client == null || !client.IsConnected || Time.realtimeSinceStartup < nextFactRetryTime)
+            return;
+
+        sendingStoredFacts = true;
+        try
+        {
+            while (isActiveAndEnabled && client.IsConnected && storedFacts.Count > 0)
+            {
+                // One at a time preserves the order of mutable updates and retries.
+                await client.StoreFactAsync(actorId, storedFacts[0]);
+                storedFacts.RemoveAt(0);
+            }
+        }
+        catch (Exception exception)
+        {
+            if (this != null)
+            {
+                nextFactRetryTime = Time.realtimeSinceStartup + 2f;
+                Debug.LogWarning($"{name}: Fact remains queued: {exception.Message}", this);
+            }
+        }
+        finally
+        {
+            sendingStoredFacts = false;
+        }
     }
 
     // Receive Python's already-parsed NPC action.
@@ -164,7 +200,7 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
     // Validate identifiers before sending them to Prolog.
     private static bool IsValidAtom(string value)
     {
-        return !string.IsNullOrEmpty(value) && Regex.IsMatch(value, @"^[a-z][A-Za-z0-9_]*$");
+        return !string.IsNullOrEmpty(value) && Regex.IsMatch(value, @"^[a-z][A-Za-z0-9_]*\z");
     }
 
     // Convert Unity's current world state into the Python request format.
