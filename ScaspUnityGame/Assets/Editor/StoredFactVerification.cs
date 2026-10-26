@@ -60,6 +60,7 @@ public static class StoredFactVerification
         Directory.CreateDirectory(directory);
         Process server = null;
         GameObject fixture = null;
+        GameObject leverFixture = null;
         EditorApplication.CallbackFunction pump = null;
         Task<string> serverErrors = null;
         int checks = 0;
@@ -91,11 +92,17 @@ public static class StoredFactVerification
             var ready = JsonUtility.FromJson<ServerReady>(readyLine);
             check(ready != null && !string.IsNullOrEmpty(ready.url), "Isolated Python server started");
 
-            fixture = new GameObject("StoredFactVerification") { hideFlags = HideFlags.HideAndDontSave };
-            var strategy = fixture.AddComponent<ScaspStrategy>();
+            var npcPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/prefabs/playerPrefab.prefab");
+            fixture = (GameObject)PrefabUtility.InstantiatePrefab(npcPrefab);
+            fixture.name = "StoredFactVerification";
+            fixture.hideFlags = HideFlags.HideAndDontSave;
+            fixture.transform.position = new Vector3(10000, 10000, 0);
+            var strategy = fixture.GetComponent<ScaspStrategy>();
             var agent = fixture.GetComponent<Agent>();
             var client = fixture.GetComponent<ScaspClient>();
-            var receiver = fixture.AddComponent<AgentFactReceiver>();
+            var receiver = fixture.GetComponent<AgentFactReceiver>();
+            check(strategy != null && receiver != null && fixture.GetComponents<ScaspClient>().Length == 1,
+                "Gameplay NPC prefab has a fact receiver, s(CASP) strategy, and exactly one client");
             // Unity does not call these non-ExecuteAlways lifecycle methods in Edit Mode.
             InvokeLifecycle(strategy, "Awake");
             agent.SetStrategy(strategy);
@@ -113,16 +120,32 @@ public static class StoredFactVerification
 
             int received = 0;
             receiver.FactReceived += _ => received++;
-            var lever = new Fact(FactType.LeverActivated, FactLifetime.Permanent, "lever1");
-            check(receiver.ReceiveFact(lever) && received == 1 && strategy.PendingFactCount == 1,
-                "Receiver accepts a permanent fact before the socket connects");
+            var leverPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/prefabs/Lever.prefab");
+            leverFixture = (GameObject)PrefabUtility.InstantiatePrefab(leverPrefab);
+            leverFixture.hideFlags = HideFlags.HideAndDontSave;
+            leverFixture.transform.position = fixture.transform.position + Vector3.right;
+            leverFixture.name = "lever_1";
+            var leverScript = leverFixture.GetComponent<LeverScript>();
+            leverScript.leverManager = leverFixture.AddComponent<LeverManager>();
+            leverScript.leverManager.totalLevers = 100;
+            var emitter = leverFixture.GetComponent<LeverFactEmitter>();
+            InvokeLifecycle(leverScript, "Awake");
+            InvokeLifecycle(emitter, "Awake");
+            InvokeLifecycle(emitter, "OnDisable");
+            InvokeLifecycle(emitter, "OnEnable");
+            emitter.SetLeverId(leverFixture.name); // Same identity assignment as MapManager.
+            Physics2D.SyncTransforms();
+            InvokeLifecycle(leverScript, "OnTriggerEnter2D", fixture.GetComponent<Collider2D>());
+            var lever = new Fact(FactType.LeverActivated, FactLifetime.Permanent, leverFixture.name);
+            check(leverScript.isOn && received == 1 && strategy.PendingFactCount == 1,
+                "Gameplay lever activation delivers a permanent fact to the NPC before connection");
             check(ReadFacts(factsFile) == "verification_baseline.\n",
                 "Disconnected fact remains queued without changing Python storage");
             Expect<InvalidOperationException>(() => strategy.SetActorId("observer2"));
             check(true, "Pending facts cannot be reassigned to a different observer");
 
             InvokeLifecycle(client, "Start");
-            const string leverClause = "stored_fact(observer1, permanent, lever_activated, lever1, none, none).";
+            const string leverClause = "stored_fact(observer1, permanent, lever_activated, lever_1, none, none).";
             await WaitUntil(() => ReadFacts(factsFile).Contains(leverClause), "Initial file write");
             check(strategy.PendingFactCount == 1,
                 "A socket send alone does not clear a fact when its acknowledgment is lost");
@@ -145,7 +168,7 @@ public static class StoredFactVerification
             await WaitUntil(() => strategy.PendingFactCount == 0, "Second observer write");
             contents = ReadFacts(factsFile);
             check(contents.Contains(leverClause) && contents.Contains(
-                "stored_fact(observer2, permanent, lever_activated, lever1, none, none)."),
+                "stored_fact(observer2, permanent, lever_activated, lever_1, none, none)."),
                 "The same fact is stored separately for each observer");
             check(contents.StartsWith("verification_baseline.\n"), "Existing file contents are preserved");
 
@@ -163,6 +186,11 @@ public static class StoredFactVerification
         {
             if (pump != null)
                 EditorApplication.update -= pump;
+            if (leverFixture != null)
+            {
+                InvokeLifecycle(leverFixture.GetComponent<LeverFactEmitter>(), "OnDisable");
+                UnityEngine.Object.DestroyImmediate(leverFixture);
+            }
             if (fixture != null)
             {
                 // Edit Mode also omits OnDestroy for these components.
@@ -216,8 +244,8 @@ public static class StoredFactVerification
 
     private static string ReadFacts(string path) => File.ReadAllText(path).Replace("\r\n", "\n");
 
-    private static void InvokeLifecycle(MonoBehaviour component, string method) => component.GetType()
-        .GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic).Invoke(component, null);
+    private static void InvokeLifecycle(MonoBehaviour component, string method, params object[] arguments) => component.GetType()
+        .GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic).Invoke(component, arguments);
 
     private static void Expect<T>(Action action) where T : Exception
     {

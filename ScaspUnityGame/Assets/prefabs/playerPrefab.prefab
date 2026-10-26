@@ -189,7 +189,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 600286fe85abea14e8e1d51a37e7c6b7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Agent
-  strategyComponent: {fileID: 0}
+  strategyComponent: {fileID: 477217731706614787}
   health: 3
   role: innocent
 --- !u!114 &4180092995283551806
@@ -221,7 +221,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e328c4436939e5c45b7285099cce3d8a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ScaspStrategy
-  client: {fileID: 0}
+  client: {fileID: 2728016071441532600}
   actorId: player1
   leversToWin: 3
   requestTimeout: 35
@@ -250,10 +250,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 8838343777709214332}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0783426e6f0cfa742a2577b9d8a74bcb, type: 3}
+  m_Script: {fileID: 11500000, guid: 79b442db85c746869ed933435cb64412, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ScaspClient
-  serverUrl: ws://localhost:6767
-  onAction:
-    m_PersistentCalls:
-      m_Calls: []
+  m_EditorClassIdentifier: Assembly-CSharp::AgentFactReceiver

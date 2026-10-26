@@ -105,7 +105,15 @@ Run **Tools > Facts > Verify Python Storage** in Edit Mode for the full
 receiver-to-Python-file check without Docker or s(CASP).
 
 Validation on October 26, 2026 supersedes the earlier pending Unity execution note:
-the stored Python path passed 11 checks, the existing pipeline passed 31 checks,
+the stored Python path passed 12 checks, the existing pipeline passed 31 checks,
 and transient queries passed 11 checks, all in Unity 6000.6.0f1 with exit code 0.
 The Python server suite also passed all 12 tests. Storage verification uses the
 actual Python handler and file writes; it does not exercise s(CASP) reasoning.
+
+The storage verifier now instantiates the gameplay NPC and lever prefabs, checking
+the receiver/strategy/client wiring and invoking the lever's real trigger handler.
+Spawned levers receive their generated `lever_1`, `lever_2`, etc. identities from
+`MapManager`, matching decision snapshots. The NPC prefab has one WebSocket client
+and an `AgentFactReceiver`. A live Main-scene test against Docker also confirmed
+`stored_fact(player1, permanent, lever_activated, lever_2, none, none).` in the normal
+server file, with matching Python success and Unity acknowledgment logs.

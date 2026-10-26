@@ -169,7 +169,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4ffdf70742ac46749e1921179182c49e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LeverFactEmitter
-  leverId: 67
+  leverId: lever1
   observationRadius: 5
   agentLayers:
     serializedVersion: 2

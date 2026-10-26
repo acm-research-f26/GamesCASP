@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import re
 import uuid
 
@@ -7,6 +8,7 @@ from FactFactory import FactFactory
 from StoredFacts import StoredFact, require_atom, update_stored_facts
 
 SOLVER_TIMEOUT_SECONDS = 30
+logger = logging.getLogger(__name__)
 
 
 class UnityRequestContext:
@@ -272,6 +274,9 @@ class UnityStoredFactsRequest(UnityRequest):
         facts = [StoredFact.from_payload(actor, payload) for payload in payloads]
         async with self.ctx["facts_lock"]:
             update_stored_facts(self.ctx["facts_temp_file"], facts)
+
+        for fact in facts:
+            logger.info("Stored fact: %s", fact.to_prolog().strip())
 
         async with self.ctx["send_lock"]:
             await self.ctx["socket"].send(json.dumps({

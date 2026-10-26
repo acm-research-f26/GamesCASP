@@ -12,6 +12,14 @@ public class LeverFactEmitter : MonoBehaviour
 
     private LeverScript lever;
 
+    // MapManager supplies the same unique identity used by NPC world snapshots.
+    public void SetLeverId(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+            throw new System.ArgumentException("A lever needs a unique entity ID.", nameof(id));
+        leverId = id;
+    }
+
     private void Awake()
     {
         lever = GetComponent<LeverScript>();

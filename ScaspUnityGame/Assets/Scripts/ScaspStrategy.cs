@@ -159,6 +159,7 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
             {
                 // One at a time preserves the order of mutable updates and retries.
                 await client.StoreFactAsync(actorId, storedFacts[0]);
+                Debug.Log($"{name}: Python stored {storedFacts[0].Type} for {actorId}: {storedFacts[0].SubjectId}", this);
                 storedFacts.RemoveAt(0);
             }
         }

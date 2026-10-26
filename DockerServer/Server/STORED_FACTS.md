@@ -72,8 +72,9 @@ a particular interpreter, set `GAMESCASP_PYTHON` to its executable path before
 starting Unity. Docker and s(CASP) are not required for this storage-only check.
 
 The tool starts `tests/stored_fact_server.py` on a free loopback port using the
-production Python request handler. It creates a temporary Unity receiver, strategy,
-and client, and verifies the resulting file in `ScaspUnityGame/Temp`. It checks
+production Python request handler. It instantiates the actual gameplay NPC and
+lever prefabs, invokes lever activation through the real trigger handler, and
+verifies the resulting file in `ScaspUnityGame/Temp`. It checks prefab wiring,
 pre-connection queuing, acknowledgments, a dropped acknowledgment and safe retry,
 permanent deduplication, ordered mutable replacement, observer isolation, optional
 distance (including zero), preservation of existing facts, and rejected input.
@@ -93,9 +94,37 @@ remain available for their respective regression checks.
 `AgentFactReceiver.FactReceived` still means the strategy accepted a fact locally.
 For `ScaspStrategy`, `PendingFactCount` includes queued/in-flight writes and reaches
 zero after Python acknowledges them. Use a unique `actorId` per NPC, as the current
-`PlayerManager` already does. No scene or prefab changes are required for this path.
+`PlayerManager` already does. The gameplay NPC prefab includes `AgentFactReceiver`
+and explicitly selects its `ScaspStrategy` and single `ScaspClient`. `MapManager`
+assigns each spawned lever's name (such as `lever_1`) to its emitter as well, so
+event facts and NPC snapshots identify the same lever.
 
 Validated on October 26, 2026: all 12 Python tests passed, and Unity 6000.6.0f1
-completed the Python storage verifier (11 checks), existing fact-pipeline verifier
+completed the Python storage verifier (12 checks), existing fact-pipeline verifier
 (31 checks), and transient-query verifier (11 checks), each with exit code 0.
 This validates storage and snapshot regressions, not new reasoning over stored facts.
+
+## Watching a gameplay session
+
+After restarting the Python server to load changes, enter Play Mode, start the game,
+and activate a lever with an NPC within its emitter's observation radius. Watch:
+
+```powershell
+docker compose -f DockerServer/docker-compose.yml logs -f gamescasp
+```
+
+Python logs `Stored fact: stored_fact(player1, permanent, lever_activated, lever_1, none, none).`
+only after writing the file. Unity logs `Python stored LeverActivated for player1: lever_1`
+after receiving the acknowledgment. Replays may produce repeated success log lines;
+the permanent fact still appears only once in the file.
+
+To inspect the actual stored facts from the repository root:
+
+```powershell
+Select-String -Path DockerServer/Server/facts_temp.pl -Pattern '^stored_fact\('
+```
+
+The file is reset when the server starts, so inspect it before restarting the server.
+`Survivor1` still uses the local-only sample strategy; the spawned `playerPrefab`
+NPCs use Python. Zombie attacks currently log messages but do not emit `AgentAttacked`
+facts; lever activation is the gameplay event source for this storage path.
