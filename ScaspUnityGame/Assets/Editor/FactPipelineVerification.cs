@@ -6,6 +6,19 @@ using UnityEngine;
 // No scene changes: builds and destroys a temporary lever/agent fixture.
 public static class FactPipelineVerification
 {
+    // Probe action dispatch without relying on movement, scene targets, or log wording.
+    private sealed class RecordingActions : AiAction
+    {
+        private void Record(string action) => Debug.Log($"{name}: {action}");
+        protected override void RunFrom(string target) => Record("Run from " + target);
+        protected override void HoldBarricade(string target) => Record("Hold barricade " + target);
+        protected override void MoveToBarricade(string target) => Record("Move to barricade " + target);
+        protected override void PullLever(string target) => Record("Pull lever " + target);
+        protected override void MoveToLever(string target) => Record("Move to lever " + target);
+        protected override void HuntLever() => Record("Hunt for lever");
+        protected override void Wait() => Record("Wait");
+    }
+
     private sealed class RecordingStrategy : IAgentStrategy
     {
         public readonly List<Fact> Facts = new List<Fact>();
@@ -102,7 +115,10 @@ public static class FactPipelineVerification
             Expect<ArgumentNullException>(() => near.ReceiveFact(null));
             check(true, "Null facts rejected");
 
-            var unconfigured = Make(objects, "unconfigured", origin).AddComponent<AgentFactReceiver>();
+            var unconfiguredObject = Make(objects, "unconfigured", origin);
+            unconfiguredObject.AddComponent<RecordingActions>();
+            var unconfigured = unconfiguredObject.AddComponent<AgentFactReceiver>();
+            InvokeCallback(unconfigured.GetComponent<Agent_Parent_Script>(), "Awake");
             int falseNotifications = 0;
             unconfigured.FactReceived += _ => falseNotifications++;
             check(!unconfigured.ReceiveFact(fact) && falseNotifications == 0,
@@ -117,7 +133,9 @@ public static class FactPipelineVerification
             check(true, "Null strategy rejected");
 
             var inspectorObject = Make(objects, "inspector", origin);
+            inspectorObject.AddComponent<RecordingActions>();
             var inspectorAgent = inspectorObject.AddComponent<Agent_Parent_Script>();
+            InvokeCallback(inspectorAgent, "Awake");
             var sample = inspectorObject.AddComponent<SampleFactStrategy>();
             var agentSettings = new SerializedObject(inspectorAgent);
             agentSettings.FindProperty("strategyComponent").objectReferenceValue = sample;
@@ -186,7 +204,9 @@ public static class FactPipelineVerification
     {
         var obj = Make(objects, name, position);
         obj.layer = layer;
+        obj.AddComponent<RecordingActions>();
         var receiver = obj.AddComponent<AgentFactReceiver>();
+        InvokeCallback(obj.GetComponent<Agent_Parent_Script>(), "Awake");
         strategy = new RecordingStrategy();
         obj.GetComponent<Agent_Parent_Script>().SetStrategy(strategy);
         obj.AddComponent<CircleCollider2D>();
