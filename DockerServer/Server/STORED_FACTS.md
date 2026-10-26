@@ -128,3 +128,25 @@ The file is reset when the server starts, so inspect it before restarting the se
 `Survivor1` still uses the local-only sample strategy; the spawned `playerPrefab`
 NPCs use Python. Zombie attacks currently log messages but do not emit `AgentAttacked`
 facts; lever activation is the gameplay event source for this storage path.
+
+### Inspecting mutable and transient delivery in Play Mode
+
+Select a spawned `playerPrefab(Clone)` NPC in the Hierarchy. Use **Tools > Facts >
+Send Mutable Test Fact (Play Mode)** to send a clearly named `mutable_storage_probe`
+through its receiver and normal storage path. Python's `Stored fact:` log and
+`facts_temp.pl` show a mutable `agent_attacked` clause. Run the menu action again:
+the target alternates between `test_attacker_1` and `test_attacker_2`, while only
+one mutable clause remains for this observer/type/subject. These are deliberate
+test facts and remain until replaced or the server session resets.
+
+For transient observations, use **Tools > Facts > Request NPC Snapshot (Play Mode)**
+with that NPC selected. This requests a normal decision and executes the returned
+action. Python logs `NPC snapshot received for player1: zombies=[...]` after
+validating the incoming snapshot. A nonempty list proves the observed zombie IDs
+and distances arrived at Python; `[]` means that request had no zombie observations.
+The snapshot is temporary and does not produce transient entries in `facts_temp.pl`.
+Place an active zombie within the NPC's detection range to inspect a nonempty
+snapshot, and use a valid lowercase-leading entity name such as `zombie1`.
+
+Restart the Python server to load new logging code before this check. Restarting
+also resets the stored facts, so do it before sending the mutable test facts.

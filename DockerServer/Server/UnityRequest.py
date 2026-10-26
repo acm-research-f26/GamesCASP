@@ -186,6 +186,9 @@ class UnityNPCDecisionRequest(UnityActionRequest):
                 f"Invalid NPC state: {exc}"
             ) from exc
 
+        logger.info("NPC snapshot received for %s: zombies=%s", actor,
+                    json.dumps(state.get("zombies", [])))
+
         snapshot_id = uuid.uuid4().hex
 
         snapshot_file = (

@@ -18,6 +18,53 @@ public static class StoredFactVerification
     }
 
     private static bool running;
+    private static int mutableProbeCount;
+
+    [MenuItem("Tools/Facts/Send Mutable Test Fact (Play Mode)")]
+    public static void SendMutableTestFact()
+    {
+        var npc = SelectedNpc();
+        if (npc == null)
+            return;
+        var receiver = npc.GetComponent<AgentFactReceiver>();
+        if (receiver == null)
+        {
+            Debug.LogWarning("The selected NPC needs AgentFactReceiver.", npc);
+            return;
+        }
+
+        string target = "test_attacker_" + (mutableProbeCount % 2 + 1);
+        var fact = new Fact(FactType.AgentAttacked, FactLifetime.Mutable, "mutable_storage_probe", target);
+        if (receiver.ReceiveFact(fact))
+        {
+            mutableProbeCount++;
+            Debug.Log($"Queued mutable storage probe with target {target}. Check Python's Stored fact log and facts_temp.pl.", npc);
+        }
+    }
+
+    [MenuItem("Tools/Facts/Request NPC Snapshot (Play Mode)")]
+    public static void RequestNpcSnapshot()
+    {
+        var npc = SelectedNpc();
+        if (npc != null)
+            npc.RequestDecision();
+    }
+
+    private static Agent_Parent_Script SelectedNpc()
+    {
+        if (!EditorApplication.isPlaying)
+        {
+            Debug.LogWarning("Enter Play Mode and start the game first.");
+            return null;
+        }
+        var strategy = Selection.activeGameObject?.GetComponentInParent<ScaspStrategy>();
+        if (strategy == null)
+        {
+            Debug.LogWarning("Select a spawned NPC with ScaspStrategy in the Hierarchy, such as playerPrefab(Clone).");
+            return null;
+        }
+        return strategy.GetComponent<Agent_Parent_Script>();
+    }
 
     [MenuItem("Tools/Facts/Verify Python Storage")]
     public static async void Run()
