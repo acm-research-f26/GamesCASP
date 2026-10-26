@@ -79,6 +79,7 @@ class AsyncRequestTests(unittest.IsolatedAsyncioTestCase):
             .add("scasp", "test-scasp")
             .add("facts_temp_file", self.facts)
             .add("facts_lock", self.lock)
+            .add("send_lock", asyncio.Lock())
             .add("socket", AsyncMock())
         ).build()
 
@@ -130,10 +131,11 @@ class AsyncRequestTests(unittest.IsolatedAsyncioTestCase):
     async def test_slow_query_keeps_server_responsive_and_facts_stable(self):
         uri = await self.start_server()
         started, release = asyncio.Event(), asyncio.Event()
-        async def slow_query():
+        async def slow_query(query_file):
+            snapshot = next(self.directory.glob("facts_snapshot_*.pl"))
             started.set()
             await release.wait()
-            self.assertEqual(self.facts.read_text(), "baseline.\n")
+            self.assertEqual(snapshot.read_text(), "baseline.\n")
             return "X = wander_randomly"
         with patch.object(UnityActionRequest, "query_scasp", new=AsyncMock(side_effect=slow_query)):
             async with websockets.connect(uri) as first, websockets.connect(uri) as second:
@@ -146,7 +148,7 @@ class AsyncRequestTests(unittest.IsolatedAsyncioTestCase):
                     self.ctx.add("json_message", {"message_type": "heard_noise"})
                     writer = asyncio.create_task(UnityTempFactRequest(self.ctx).process())
                     await asyncio.sleep(0)
-                    self.assertFalse(writer.done())
+                    self.assertTrue(writer.done())
                 finally:
                     release.set()
                 await asyncio.wait_for(first.recv(), 2)
@@ -165,19 +167,21 @@ class AsyncRequestTests(unittest.IsolatedAsyncioTestCase):
         children = []
         child_started = asyncio.Event()
         async def substitute(*args, **kwargs):
-            self.assertEqual(args, ("test-scasp", "-s1", "mainQuery.pl"))
+            self.assertEqual(args[:2], ("test-scasp", "-s1"))
+            self.assertTrue(args[2] == "mainQuery.pl" or args[2].startswith("query_"))
             child = await create_process(sys.executable, "-c", scripts.pop(0), **kwargs)
             children.append(child)
             child_started.set()
             return child
         request = UnityActionRequest(self.ctx)
         with patch("UnityRequest.asyncio.create_subprocess_exec", side_effect=substitute):
-            self.assertIn("X = wander_randomly", await request.query_scasp())
+            query_file = self.directory / "mainQuery.pl"
+            self.assertIn("X = wander_randomly", await request.query_scasp(query_file))
             with self.assertRaisesRegex(RuntimeError, "solver failure"):
-                await request.query_scasp()
+                await request.query_scasp(query_file)
             with patch("UnityRequest.SOLVER_TIMEOUT_SECONDS", 0.05):
                 with self.assertRaisesRegex(RuntimeError, "timed out"):
-                    await request.query_scasp()
+                    await request.query_scasp(query_file)
             self.assertIsNotNone(children[-1].returncode)
             child_started.clear()
             task = asyncio.create_task(request.process())
