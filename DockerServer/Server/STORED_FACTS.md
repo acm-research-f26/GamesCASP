@@ -159,3 +159,22 @@ scene display names no longer need to be edited for this path.
 
 Restart the Python server to load new logging code before this check. Restarting
 also resets the stored facts, so do it before sending the mutable test facts.
+
+### Automatic transient updates
+
+After Start Game, `PlayerManager` requests a decision for each spawned NPC when its
+WebSocket connects, then every one second of game time. Adjust **Decision Interval**
+on the scene's PlayerManager in the Inspector to try a different rate. Each decision
+refreshes transient observations and sends a normal `npc_decision` snapshot; the
+returned action executes as usual. Inactive/dead NPCs and disconnected clients are
+skipped. Pausing game time pauses the interval.
+
+`ScaspStrategy` keeps at most one decision pending and coalesces further requests,
+so a slow Python response lowers the effective sending rate rather than building
+a queue of stale snapshots. Mutable/permanent event delivery keeps its separate
+immediate, acknowledged storage path. The Play Mode snapshot menu can still request
+an additional decision manually.
+
+Validated in the Main scene against Docker on October 26, 2026: Python's timestamped
+logs showed successive nonempty zombie snapshots approximately one second apart
+with changing distances, and Unity executed the returned `run_from` actions.

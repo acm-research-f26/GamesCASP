@@ -16,7 +16,7 @@ Radius is the current observation rule; walls do not block delivery. Multiple co
 
 `ReceiveFact` returns false and warns if no strategy is configured. `FactReceived` fires only after `StoreFact` returns successfully. A backend that performs asynchronous persistence must manage its own acknowledgement/retry behavior; this handoff does not prove remote persistence.
 
-The game loop calls `Agent_Parent_Script.RequestDecision()` when a decision is needed. The same strategy that receives facts handles that request and calls `agent.ExecuteAction(action, target)` with its choice. An asynchronous backend can do this when its response arrives. Decision requests are not automatically scheduled. Shared execution stays in the parent's overridable action methods; these currently log actions, as before the delegation refactor. `SampleFactStrategy` stores facts in memory and chooses `wait`; production behavior-tree and s(CASP) adapters remain future work.
+The game loop calls `Agent_Parent_Script.RequestDecision()` when a decision is needed. The same strategy that receives facts handles that request and calls `agent.ExecuteAction(action, target)` with its choice. An asynchronous backend can do this when its response arrives. `PlayerManager` now requests decisions for spawned s(CASP) NPCs after connection and every one second of game time, configurable through **Decision Interval**. Each request refreshes transient facts. `ScaspStrategy` coalesces requests while a previous decision is pending. Shared execution stays in the parent's overridable action methods, which delegate to `AiAction`. `SampleFactStrategy` stores facts in memory and chooses `wait`.
 
 ## Transient queries (issue #18)
 
