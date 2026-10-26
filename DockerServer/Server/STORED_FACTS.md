@@ -57,3 +57,45 @@ does not reconnect automatically after a connection failure.
 Storage lasts for this server session, as before: startup restores `facts_temp.pl`
 from `facts.pl`. These clauses preserve agent knowledge; this branch does not add
 rules that consume it or merge it into NPC decision snapshots.
+
+## Verification
+
+Run the server checks from the repository root:
+
+```powershell
+python -B -m unittest discover -s DockerServer/Server/tests -v
+```
+
+In Unity, stop Play Mode and choose **Tools > Facts > Verify Python Storage**.
+Python must be on PATH with `websockets` installed (see `requirements.txt`). To use
+a particular interpreter, set `GAMESCASP_PYTHON` to its executable path before
+starting Unity. Docker and s(CASP) are not required for this storage-only check.
+
+The tool starts `tests/stored_fact_server.py` on a free loopback port using the
+production Python request handler. It creates a temporary Unity receiver, strategy,
+and client, and verifies the resulting file in `ScaspUnityGame/Temp`. It checks
+pre-connection queuing, acknowledgments, a dropped acknowledgment and safe retry,
+permanent deduplication, ordered mutable replacement, observer isolation, optional
+distance (including zero), preservation of existing facts, and rejected input.
+The process, objects, and temporary directory are removed when it finishes.
+
+For batch execution, use the project's Unity version with these arguments:
+
+```text
+-batchmode -nographics -projectPath <ScaspUnityGame path> -executeMethod StoredFactVerification.Run -logFile <log path>
+```
+
+Omit `-quit`: this asynchronous verifier exits Unity itself after cleanup, returning
+0 on success or 1 on failure. The console/log reports `PYTHON FACT STORAGE VERIFIED`.
+The existing **Verify Draft Pipeline** and **Verify Transient Queries** menu tools
+remain available for their respective regression checks.
+
+`AgentFactReceiver.FactReceived` still means the strategy accepted a fact locally.
+For `ScaspStrategy`, `PendingFactCount` includes queued/in-flight writes and reaches
+zero after Python acknowledges them. Use a unique `actorId` per NPC, as the current
+`PlayerManager` already does. No scene or prefab changes are required for this path.
+
+Validated on October 26, 2026: all 12 Python tests passed, and Unity 6000.6.0f1
+completed the Python storage verifier (11 checks), existing fact-pipeline verifier
+(31 checks), and transient-query verifier (11 checks), each with exit code 0.
+This validates storage and snapshot regressions, not new reasoning over stored facts.

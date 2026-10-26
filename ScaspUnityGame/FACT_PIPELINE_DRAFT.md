@@ -86,3 +86,26 @@ The verifier creates temporary objects, invokes the real lever trigger handler, 
 - Wire scene/prefab instances with Samuel, implement both strategy adapters with their owners, and verify actual trigger contacts in Play Mode.
 
 The strategy integration changes the survivor prefab's component assignment and exposes explicit decision requests. It does not implement production AI backends, movement, interactions, or server protocol changes.
+
+## Stored Python delivery (issue #30)
+
+`ScaspStrategy.StoreFact` now validates and queues mutable/permanent facts for the
+existing `ScaspClient` WebSocket. It sends immediately when connected, waits for
+Python's write acknowledgment before removing a queued fact, and retries an
+unacknowledged write in order. Python stores observer-scoped `stored_fact/6` clauses
+in `facts_temp.pl`, deduplicates permanent facts, and replaces mutable entries by
+observer/type/subject. Transient queries retain their separate snapshot path.
+
+The earlier notes about locally stored s(CASP) facts not being sent are superseded
+by this implementation. NPC decision queries still use their existing snapshots;
+adding reasoning rules for stored knowledge is a separate task.
+
+See [the payload, lifetime rules, and verification instructions](../DockerServer/Server/STORED_FACTS.md).
+Run **Tools > Facts > Verify Python Storage** in Edit Mode for the full
+receiver-to-Python-file check without Docker or s(CASP).
+
+Validation on October 26, 2026 supersedes the earlier pending Unity execution note:
+the stored Python path passed 11 checks, the existing pipeline passed 31 checks,
+and transient queries passed 11 checks, all in Unity 6000.6.0f1 with exit code 0.
+The Python server suite also passed all 12 tests. Storage verification uses the
+actual Python handler and file writes; it does not exercise s(CASP) reasoning.
