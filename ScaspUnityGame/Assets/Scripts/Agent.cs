@@ -25,8 +25,22 @@ public class Agent : Agent_Parent_Script
     public void SetHealth(int newHealth)
     {
         health = Mathf.Max(0, newHealth);
-    }
+        if (health == 0)
+        {
+            foreach (SpriteRenderer sprite in GetComponentsInChildren<SpriteRenderer>())
+            {
+                Color color = sprite.color;
+                color.a = 0.5f;
+                sprite.color = color;
+            }
+            AiAction movement = GetComponent<AiAction>();
 
-    // The parent manages AI decisions and facts.
-    // AiAction manages movement and physical behavior.
+            if (movement != null)
+                movement.enabled = false;
+        }
+
+
+        // The parent manages AI decisions and facts.
+        // AiAction manages movement and physical behavior.
+    }
 }
