@@ -1,20 +1,37 @@
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using UnityEngine;
 
-public class BehaviorTree : AiStrategy
+public class BehaviorTree : IAgentStrategy
 {
     private Blackboard state = new Blackboard();
+    private AiAction aiAction = new AiAction();
     
-    public override void storeFact(Fact fact)
+    // store unity gamestate into behavior tree
+    public void StoreFact(Fact fact)
     {
-        // replace transient facts every tick
-        if (fact.type == FactType.transient)
-        {
-            fact.value = false; // if it was false, keep it false. if it was true, reset it to false
-        }
+        state.update(fact);
     }
 
-    public override AiAction getNextAction()
+    public IReadOnlyList<Fact> FetchTransientFacts()
     {
-        AiAction 
+        // use the AiAction FetchTransientFacts() method
+        IReadOnlyList<Fact> transientFacts = aiAction.FetchTransientFacts();
+
+        return transientFacts;
+    }
+
+    public void DecideNextAction(Agent_Parent_Script agent)
+    {
+        // get all transient facts using the behaviortree's FetchTransientFacts() method,
+        // which uses the AiAction FetchTransientFacts() method
+        IReadOnlyList<Fact> transientFacts = FetchTransientFacts();
+
+        state.updateTransientFacts(transientFacts);
+
+        // call Execute on the AiAction object
+
+        // after executing an action, clear all the current transient facts
+        state.clearTransientState(transientFacts);
     }
 }

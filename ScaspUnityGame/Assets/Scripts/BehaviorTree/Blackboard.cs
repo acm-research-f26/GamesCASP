@@ -1,35 +1,87 @@
+using JetBrains.Annotations;
+using NUnit.Framework.Internal.Filters;
 using System.Collections.Generic;
 using Unity.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
+using static UnityEngine.GraphicsBuffer;
 
+// unity will send the game state here!
+// all nodes will read from this class
 public class Blackboard
 {
-    // unity will send the game state here!
-    // all nodes will read from this class
-
+    private AiAction aiAction = new AiAction();
+    public bool searchingForLever; // transient
+    public bool searchingForBarricade; //transient
     public bool canSeeLever; // transient
     public bool lastLever; // permanent
     public bool canSeeBarricade; // transient
-    public bool zombieNearby; // transient
+    public int numZombiesNearby; // transient, links to the number of "Zombie" objects in AiAction's DetectedObjects
+    public int closestZombieDistance; // transient, updates with findNearest("Zombie") from AiAction (?)
+    public int health; // mutable, maybe updates with another variable?
 
-    public List<Fact> allFacts = new List<Fact>();
+    // how far each NPC can see, linked with detectionRange from AiAction
+    public float visionRadius = 5f;
 
-    public List<Fact> getAllTransientFacts()
+    public int totalLevers = LeverManager.totalLevers;
+    public int activatedLevers = LeverManager.activatedLevers;
+
+    // update each type of fact
+    public void update(Fact fact)
     {
-        List<Fact> transientFacts = new List<Fact>();
-        foreach (Fact facts in allFacts)
+        // permanent
+        if (fact.Type == FactType.LeverActivated)
         {
-            if (facts.type == FactType.transient)
+            // activated levers in game is linked to LeverManager.cs
+            // everytime the latter updates, the former will too
+            // probably should just make a reference var for this
+            activatedLevers = LeverManager.activatedLevers;
+
+            // last lever condition
+            if (activatedLevers == (totalLevers - 1))
             {
-                transientFacts.Add(facts);
+                lastLever = true;
             }
         }
 
-        return transientFacts;
+        // transient
+        if (fact.Type == FactType.AgentAttacked)
+        {
+            health--;
+            if (health == 0)
+            {
+                // agent is dead
+                // delete the entire gameobject
+            }
+        }
+
+        // transient
+        if (fact.Type == FactType.ZombieSeen)
+        {
+            // how far away is the zombie?
+            // if it's within fleeDistance from AiAction, update ZombieNearby to be true
+        }
     }
 
-    // placeholder value for how far each NPC can see
-    // link this with some unity function to know which facts to store
-    // i.e. a zombieNear fact will only be stored if the zombie is within the vision radius
-    public double visionRadius = 10.0;
+    // update ALL transient facts
+    public void updateTransientFacts(IReadOnlyList<Fact> transientFacts)
+    {
+        foreach (Fact fact in transientFacts)
+        {
+            // update with current state of transient facts in the game
+            // will prolly involve me using DetectObjects in AiAction
+        }
+    }
+
+    // clear ALL transient facts
+    // only clear bools that were changed by updateTransientFacts()
+    public void clearTransientState(IReadOnlyList<Fact> transientFacts)
+    {
+        foreach (Fact fact in transientFacts)
+        {
+            // reset all fact values!
+            numZombiesNearby = 0;
+            closestZombieDistance = 0;
+        }
+    }
 }
