@@ -85,5 +85,10 @@ public class Zombie : MonoBehaviour
 
         return nearestAgent;
     }
+
+    void OnTriggerEnter2D(Collider2D other)
+    {
+        Debug.Log($"Colliding with object: {other.name}");
+    }
 }
 
