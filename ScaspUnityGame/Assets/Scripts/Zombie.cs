@@ -12,6 +12,7 @@ public class Zombie : MonoBehaviour
     [Header("Combat")]
     public float attackRange = 1f;
     public float attackCooldown = 1f;
+    public int attackDamage = 1;
 
     [Header("References")]
     public PlayerManager playerManager;
@@ -63,7 +64,7 @@ public class Zombie : MonoBehaviour
 
             lastAttackTime = Time.time;
 
-            // TODO: Apply damage to Agent using SetHealth().
+            targetAgent.SetHealth(targetAgent.Health - attackDamage);
         }
     }
 
@@ -88,6 +89,11 @@ public class Zombie : MonoBehaviour
         }
 
         return nearestAgent;
+    }
+
+    void OnTriggerEnter2D(Collider2D other)
+    {
+        Debug.Log($"Colliding with object: {other.name}");
     }
 }
 
