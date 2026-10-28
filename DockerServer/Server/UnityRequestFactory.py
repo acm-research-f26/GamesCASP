@@ -7,6 +7,9 @@ class UnityRequestFactory:
         if request_type == 'fact':
             return ur.UnityTempFactRequest(unity_request_ctx)
 
+        if request_type == 'store_facts':
+            return ur.UnityStoredFactsRequest(unity_request_ctx)
+
         if request_type == 'get_action':
             return ur.UnityActionRequest(unity_request_ctx)
 
@@ -14,5 +17,5 @@ class UnityRequestFactory:
             return ur.UnityNPCDecisionRequest(unity_request_ctx)
 
         raise ValueError(
-            "request_type must be 'fact', 'get_action', or 'npc_decision'"
+            "request_type must be 'fact', 'store_facts', 'get_action', or 'npc_decision'"
         )

@@ -21,4 +21,5 @@ dist/
 
 # Runtime facts are recreated from facts.pl when the server starts
 /Server/facts_temp.pl
+/Server/facts_temp.pl.tmp
 *.log

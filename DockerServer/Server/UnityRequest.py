@@ -1,11 +1,14 @@
 import asyncio
 import json
+import logging
 import re
 import uuid
 
 from FactFactory import FactFactory
+from StoredFacts import StoredFact, require_atom, update_stored_facts
 
 SOLVER_TIMEOUT_SECONDS = 30
+logger = logging.getLogger(__name__)
 
 
 class UnityRequestContext:
@@ -183,6 +186,9 @@ class UnityNPCDecisionRequest(UnityActionRequest):
                 f"Invalid NPC state: {exc}"
             ) from exc
 
+        logger.info("NPC snapshot received for %s: zombies=%s", actor,
+                    json.dumps(state.get("zombies", [])))
+
         snapshot_id = uuid.uuid4().hex
 
         snapshot_file = (
@@ -254,3 +260,30 @@ class UnityTempFactRequest(UnityRequest):
                 encoding="utf-8"
             ) as temp_file:
                 temp_file.write(fact)
+
+
+class UnityStoredFactsRequest(UnityRequest):
+    async def process(self):
+        message = self.ctx["json_message"]
+        actor = require_atom(message.get("actor"), "actor")
+        request_id = message.get("request_id")
+        if not isinstance(request_id, str) or not request_id or len(request_id) > 128:
+            raise ValueError("request_id must be a nonempty string of at most 128 characters")
+        payloads = message.get("facts")
+        if not isinstance(payloads, list) or not payloads or len(payloads) > 256:
+            raise ValueError("facts must contain between 1 and 256 facts")
+
+        # Validate the whole batch before touching the file.
+        facts = [StoredFact.from_payload(actor, payload) for payload in payloads]
+        async with self.ctx["facts_lock"]:
+            update_stored_facts(self.ctx["facts_temp_file"], facts)
+
+        for fact in facts:
+            logger.info("Stored fact: %s", fact.to_prolog().strip())
+
+        async with self.ctx["send_lock"]:
+            await self.ctx["socket"].send(json.dumps({
+                "message_type": "facts_stored",
+                "request_id": request_id,
+                "actor": actor,
+            }))

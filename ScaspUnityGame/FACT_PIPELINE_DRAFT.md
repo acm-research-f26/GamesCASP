@@ -16,7 +16,7 @@ Radius is the current observation rule; walls do not block delivery. Multiple co
 
 `ReceiveFact` returns false and warns if no strategy is configured. `FactReceived` fires only after `StoreFact` returns successfully. A backend that performs asynchronous persistence must manage its own acknowledgement/retry behavior; this handoff does not prove remote persistence.
 
-The game loop calls `Agent_Parent_Script.RequestDecision()` when a decision is needed. The same strategy that receives facts handles that request and calls `agent.ExecuteAction(action, target)` with its choice. An asynchronous backend can do this when its response arrives. Decision requests are not automatically scheduled. Shared execution stays in the parent's overridable action methods; these currently log actions, as before the delegation refactor. `SampleFactStrategy` stores facts in memory and chooses `wait`; production behavior-tree and s(CASP) adapters remain future work.
+The game loop calls `Agent_Parent_Script.RequestDecision()` when a decision is needed. The same strategy that receives facts handles that request and calls `agent.ExecuteAction(action, target)` with its choice. An asynchronous backend can do this when its response arrives. `PlayerManager` now requests decisions for spawned s(CASP) NPCs after connection and every one second of game time, configurable through **Decision Interval**. Each request refreshes transient facts. `ScaspStrategy` coalesces requests while a previous decision is pending. Shared execution stays in the parent's overridable action methods, which delegate to `AiAction`. `SampleFactStrategy` stores facts in memory and chooses `wait`.
 
 ## Transient queries (issue #18)
 
@@ -43,11 +43,12 @@ between agents; selection belongs to the caller.
 
 Both current strategies delegate to `AiAction` to refresh 2D physics detection at
 query time. Active zombies in detection range yield `ZombieSeen` facts with a
-transient lifetime, the zombie's GameObject name as `SubjectId`, and current 2D
+transient lifetime, the zombie's runtime `EntityId` as `SubjectId`, and current 2D
 distance in `Distance` (an optional, nonnegative finite value on `Fact`). Child
 colliders resolve to the zombie root and multiple colliders produce one observation.
-Detection uses the existing radius rule, without wall occlusion. Keep entity names
-unique; s(CASP) also requires valid Prolog atom names. Moving away or disabling the
+Detection uses the existing radius rule, without wall occlusion. Each zombie gets
+a unique Prolog-safe ID that survives display-name changes; action targets resolve
+through that same ID. Moving away or disabling the
 zombie removes it from the next query; previous snapshots remain unchanged.
 
 s(CASP)'s NPC request consumes these queried zombie facts. Its other world snapshot
@@ -86,3 +87,35 @@ The verifier creates temporary objects, invokes the real lever trigger handler, 
 - Wire scene/prefab instances with Samuel, implement both strategy adapters with their owners, and verify actual trigger contacts in Play Mode.
 
 The strategy integration changes the survivor prefab's component assignment and exposes explicit decision requests. It does not implement production AI backends, movement, interactions, or server protocol changes.
+
+## Stored Python delivery (issue #30)
+
+`ScaspStrategy.StoreFact` now validates and queues mutable/permanent facts for the
+existing `ScaspClient` WebSocket. It sends immediately when connected, waits for
+Python's write acknowledgment before removing a queued fact, and retries an
+unacknowledged write in order. Python stores observer-scoped `stored_fact/6` clauses
+in `facts_temp.pl`, deduplicates permanent facts, and replaces mutable entries by
+observer/type/subject. Transient queries retain their separate snapshot path.
+
+The earlier notes about locally stored s(CASP) facts not being sent are superseded
+by this implementation. NPC decision queries still use their existing snapshots;
+adding reasoning rules for stored knowledge is a separate task.
+
+See [the payload, lifetime rules, and verification instructions](../DockerServer/Server/STORED_FACTS.md).
+Run **Tools > Facts > Verify Python Storage** in Edit Mode for the full
+receiver-to-Python-file check without Docker or s(CASP).
+
+Validation on October 26, 2026 supersedes the earlier pending Unity execution note:
+the stored Python path passed 12 checks, the existing pipeline passed 31 checks,
+and transient queries passed 14 checks in Unity 6000.6.0f1. The transient checks
+include prefab clone identity, rename stability, and action target resolution.
+The Python server suite also passed all 12 tests. Storage verification uses the
+actual Python handler and file writes; it does not exercise s(CASP) reasoning.
+
+The storage verifier now instantiates the gameplay NPC and lever prefabs, checking
+the receiver/strategy/client wiring and invoking the lever's real trigger handler.
+Spawned levers receive their generated `lever_1`, `lever_2`, etc. identities from
+`MapManager`, matching decision snapshots. The NPC prefab has one WebSocket client
+and an `AgentFactReceiver`. A live Main-scene test against Docker also confirmed
+`stored_fact(player1, permanent, lever_activated, lever_2, none, none).` in the normal
+server file, with matching Python success and Unity acknowledgment logs.

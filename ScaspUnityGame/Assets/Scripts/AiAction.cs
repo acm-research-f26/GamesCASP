@@ -107,7 +107,7 @@ public class AiAction : MonoBehaviour
             var zombie = detected.obj.GetComponentInParent<Zombie>();
             if (zombie == null || !zombie.isActiveAndEnabled || !seen.Add(zombie))
                 continue;
-            facts.Add(new Fact(FactType.ZombieSeen, FactLifetime.Transient, zombie.name,
+            facts.Add(new Fact(FactType.ZombieSeen, FactLifetime.Transient, zombie.EntityId,
                 distance: Vector2.Distance(transform.position, zombie.transform.position)));
         }
         lastTransientFactCount = facts.Count;
@@ -388,6 +388,7 @@ public class AiAction : MonoBehaviour
                 continue;
 
             GameObject candidate = null;
+            string candidateId = null;
 
             switch (tag)
             {
@@ -407,6 +408,7 @@ public class AiAction : MonoBehaviour
                         continue;
 
                     candidate = zombie.gameObject;
+                    candidateId = zombie.EntityId;
                     break;
 
                 case "Barricade":
@@ -427,7 +429,7 @@ public class AiAction : MonoBehaviour
                     continue;
             }
 
-            if (!string.IsNullOrEmpty(target) && candidate.name != target)
+            if (!string.IsNullOrEmpty(target) && candidate.name != target && candidateId != target)
                 continue;
 
             float distance = Vector2.Distance(transform.position, candidate.transform.position);

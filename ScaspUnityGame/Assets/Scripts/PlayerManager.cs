@@ -7,6 +7,8 @@ public class PlayerManager : MonoBehaviour
     [Header("NPC Settings")]
     [SerializeField] private float spawnSpacing = 2f;
     [SerializeField] private Vector2 spawnPosition = Vector2.zero;
+    [Tooltip("Seconds between NPC decision requests. Each request refreshes transient observations.")]
+    [SerializeField, Min(0.1f)] private float decisionInterval = 1f;
 
     [Header("NPC Prefabs")]
     public GameObject playerPrefab;
@@ -64,9 +66,9 @@ public class PlayerManager : MonoBehaviour
 
             Debug.Log($"Spawned innocent NPC: {actorId} at {position}", npc);
 
-            // Request the first AI decision when connected.
+            // Refresh each NPC's observations and decision on a regular game-time interval.
             if (strategy != null && client != null)
-                StartCoroutine(InitializeNpcDecision(agent, client));
+                StartCoroutine(RunNpcDecisionLoop(agent, client));
             else
                 Debug.LogWarning($"{actorId}: Missing ScaspStrategy or ScaspClient.", npc);
         }
@@ -74,13 +76,19 @@ public class PlayerManager : MonoBehaviour
         Debug.Log($"Successfully spawned {players.Count} innocent NPC(s).", this);
     }
 
-    // Wait for the Python connection before requesting AI decisions.
-    private IEnumerator InitializeNpcDecision(Agent agent, ScaspClient client)
+    private IEnumerator RunNpcDecisionLoop(Agent agent, ScaspClient client)
     {
         yield return new WaitUntil(() => agent == null || client == null || client.IsConnected);
 
-        if (agent != null && client != null && client.IsConnected)
-            agent.RequestDecision();
+        while (agent != null && client != null)
+        {
+            if (agent.isActiveAndEnabled && agent.Health > 0 && client.IsConnected)
+                agent.RequestDecision();
+
+            // ScaspStrategy coalesces requests while a previous decision is pending.
+            // Game-time waits also pause with Time.timeScale.
+            yield return new WaitForSeconds(Mathf.Max(0.1f, decisionInterval));
+        }
     }
 }
 

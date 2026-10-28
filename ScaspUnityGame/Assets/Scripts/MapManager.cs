@@ -118,6 +118,8 @@ public class MapManager : MonoBehaviour
             lever.name = $"lever_{i + 1}";
             LeverScript leverScript = lever.GetComponent<LeverScript>();
             leverScript.leverManager = leverManager;
+            if (lever.TryGetComponent<LeverFactEmitter>(out var emitter))
+                emitter.SetLeverId(lever.name);
             LeverPositions.RemoveAt(index);
         }
 

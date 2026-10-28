@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -13,12 +14,15 @@ public class ScaspClient : MonoBehaviour
 {
     [Header("s(CASP) Server")]
     [SerializeField] private string serverUrl = "ws://localhost:6767";
+    [SerializeField, Min(0.1f)] private float factAcknowledgmentTimeout = 10f;
     [Header("Original AI Events")]
     [SerializeField] private UnityEvent<string> onAction = new UnityEvent<string>();
 
     private ClientWebSocket socket;
     private CancellationTokenSource lifetime;
     private readonly SemaphoreSlim sendLock = new SemaphoreSlim(1, 1);
+    private readonly Dictionary<string, TaskCompletionSource<bool>> pendingFactWrites =
+        new Dictionary<string, TaskCompletionSource<bool>>();
 
     // Queue responses for processing on Unity's main thread
     private readonly ConcurrentQueue<string> responseQueue = new ConcurrentQueue<string>();
@@ -39,6 +43,8 @@ public class ScaspClient : MonoBehaviour
         // NPC-specific request fields
         public string actor;
         public NpcState state;
+        public string request_id;
+        public ScaspFactPayload[] facts;
     }
 
     [Serializable]
@@ -48,6 +54,7 @@ public class ScaspClient : MonoBehaviour
         public string[] possible_actions;
         public string error;
         public string detail;
+        public string request_id;
         // NPC-specific response fields
         public string actor;
         public string action;
@@ -80,6 +87,7 @@ public class ScaspClient : MonoBehaviour
         }
         finally
         {
+            FailPendingFactWrites();
             lifetime.Cancel();
             socket.Dispose();
             socket = null;
@@ -103,6 +111,43 @@ public class ScaspClient : MonoBehaviour
         }
 
         SendRequest(new Request {request_type = "npc_decision", actor = actor, state = state});
+    }
+
+    // Completion means Python acknowledged the file write, not just a socket send.
+    public async Task StoreFactAsync(string actor, Fact fact)
+    {
+        ScaspFactPayload.ValidateAtom(actor, nameof(actor));
+        ScaspFactPayload payload = ScaspFactPayload.FromFact(fact);
+        if (!IsConnected || lifetime == null || lifetime.IsCancellationRequested)
+            throw new InvalidOperationException("s(CASP) is not connected.");
+
+        string requestId = Guid.NewGuid().ToString("N");
+        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        pendingFactWrites.Add(requestId, completion);
+        try
+        {
+            await SendAsync(new Request
+            {
+                request_type = "store_facts",
+                request_id = requestId,
+                actor = actor,
+                facts = new[] { payload }
+            });
+
+            using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token))
+            {
+                Task delay = Task.Delay(TimeSpan.FromSeconds(factAcknowledgmentTimeout), timeout.Token);
+                Task finished = await Task.WhenAny(completion.Task, delay);
+                timeout.Cancel();
+                if (finished != completion.Task)
+                    throw new TimeoutException("Python did not acknowledge fact storage before the timeout.");
+                await completion.Task;
+            }
+        }
+        finally
+        {
+            pendingFactWrites.Remove(requestId);
+        }
     }
     // Sends a fact, then requests the action for the updated world state.
     public void ReportFact(string eventName, string culprit = null)
@@ -179,7 +224,17 @@ public class ScaspClient : MonoBehaviour
 
             if (response.message_type == "error")
             {
-                Debug.LogError("s(CASP) " + response.error + ": " + response.detail, this);
+                if (!string.IsNullOrEmpty(response.request_id) &&
+                    pendingFactWrites.TryGetValue(response.request_id, out var failedWrite))
+                    failedWrite.TrySetException(new InvalidOperationException(response.error + ": " + response.detail));
+                else
+                    Debug.LogError("s(CASP) " + response.error + ": " + response.detail, this);
+            }
+            else if (response.message_type == "facts_stored")
+            {
+                if (!string.IsNullOrEmpty(response.request_id) &&
+                    pendingFactWrites.TryGetValue(response.request_id, out var completedWrite))
+                    completedWrite.TrySetResult(true);
             }
             else if (response.message_type == "possible_actions" && response.possible_actions != null)
             {
@@ -228,34 +283,20 @@ public class ScaspClient : MonoBehaviour
                 // Queue raw JSON for deserialization on Unity's main thread.
                 responseQueue.Enqueue(json);
 
-                /*
-                string json = Encoding.UTF8.GetString(message.ToArray());
-                var response = JsonUtility.FromJson<Response>(json);
-                if (response == null)
-                    throw new InvalidDataException("Empty server response.");
-                
-                // Queue the response for processing in Update()
-                responseQueue.Enqueue(response);
-                
-                
-                if (response.message_type == "error")
-                    Debug.LogError("s(CASP) " + response.error + ": " + response.detail, this);
-                else if (response.message_type == "possible_actions" && response.possible_actions != null)
-                {
-                    foreach (string action in response.possible_actions)
-                    {
-                        Debug.Log("s(CASP) action: " + action, this);
-                        onAction.Invoke(action);
-                    }
-                }
-                */
             }
         }
     }
 
     private void OnDestroy()
     {
+        FailPendingFactWrites();
         lifetime?.Cancel();
         socket?.Abort();
+    }
+
+    private void FailPendingFactWrites()
+    {
+        foreach (var completion in pendingFactWrites.Values)
+            completion.TrySetCanceled();
     }
 }
