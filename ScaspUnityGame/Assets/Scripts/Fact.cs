@@ -44,7 +44,7 @@ public sealed class Fact
     }
 
     // Explicit selection avoids scene-wide scans and preserves who observed each fact.
-    public static IReadOnlyDictionary<Agent_Parent_Script, IReadOnlyList<Fact>> FetchTransientFacts(
+    public static IReadOnlyDictionary<Agent_Parent_Script, IReadOnlyList<Fact>> FetchAllTransientFacts(
         IEnumerable<Agent_Parent_Script> requestedAgents)
     {
         if (requestedAgents == null)

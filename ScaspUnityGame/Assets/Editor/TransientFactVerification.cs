@@ -35,7 +35,7 @@ public static class TransientFactVerification
             var c = new ProbeStrategy();
             first.SetStrategy(a); second.SetStrategy(b); excluded.SetStrategy(c);
             a.Facts.Add(new Fact(FactType.ZombieSeen, FactLifetime.Transient, "zombie1", distance: 2));
-            var result = Fact.FetchTransientFacts(new[] { first, first, null, second });
+            var result = Fact.FetchAllTransientFacts(new[] { first, first, null, second });
             check(result.Count == 2 && a.Queries == 1 && b.Queries == 1 && c.Queries == 0,
                 "Only requested agents queried; duplicates and nulls skipped");
             check(result[first].Count == 1 && result[second].Count == 0,
@@ -43,12 +43,12 @@ public static class TransientFactVerification
             a.Facts.Clear();
             check(result[first].Count == 1 && first.FetchTransientFacts().Count == 0,
                 "Snapshots remain stable while new queries reflect changes");
-            check(Fact.FetchTransientFacts(Array.Empty<Agent_Parent_Script>()).Count == 0,
+            check(Fact.FetchAllTransientFacts(Array.Empty<Agent_Parent_Script>()).Count == 0,
                 "Empty selection queries nobody");
             a.Facts.Add(new Fact(FactType.LeverActivated, FactLifetime.Permanent, "lever1"));
             Expect<InvalidOperationException>(() => first.FetchTransientFacts());
             Expect<ArgumentException>(() => first.TryStoreFact(result[first][0]));
-            Expect<ArgumentNullException>(() => Fact.FetchTransientFacts(null));
+            Expect<ArgumentNullException>(() => Fact.FetchAllTransientFacts(null));
             check(true, "Query lifetime and storage boundaries enforced");
 
             var sample = first.gameObject.AddComponent<SampleFactStrategy>();

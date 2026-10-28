@@ -129,8 +129,6 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
         decisionQueued = true;
     }
 
-    public IReadOnlyList<Fact> FetchTransientFacts() => aiAction.FetchTransientFacts();
-
     // IFactStrategy: retain facts locally until Python confirms their storage.
     public void StoreFact(Fact fact)
     {
@@ -207,7 +205,7 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
     // Convert Unity's current world state into the Python request format.
     private NpcState BuildNpcState()
     {
-        var transientFacts = FetchTransientFacts();
+        var transientFacts = aiAction.FetchTransientFacts();
         GameObject[] allLevers = System.Array.ConvertAll(FindObjectsByType<LeverScript>(FindObjectsSortMode.None), lever => lever.gameObject);
         GameObject[] allZombies = System.Array.ConvertAll(FindObjectsByType<Zombie>(FindObjectsSortMode.None), zombie => zombie.gameObject);
 
