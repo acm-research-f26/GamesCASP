@@ -11,18 +11,19 @@ using static UnityEngine.GraphicsBuffer;
 public class Blackboard
 {
     private AiAction aiAction = new AiAction();
-    public bool searchingForLever; // transient
-    public bool searchingForBarricade; //transient
+    public bool searchingForLever; // mutable
+    public bool searchingForBarricade; // mutable
     public bool canSeeLever; // transient
     public bool lastLever; // permanent
     public bool canSeeBarricade; // transient
     public int numZombiesNearby; // transient, links to the number of "Zombie" objects in AiAction's DetectedObjects
-    public int closestZombieDistance; // transient, updates with findNearest("Zombie") from AiAction (?)
+    public float? closestZombieDistance; // transient, updates with findNearest("Zombie") from AiAction (?)
     public int health; // mutable, maybe updates with another variable?
 
-    // how far each NPC can see, linked with detectionRange from AiAction
+    // how far each NPC can see, same as detectionRange from AiAction
     public float visionRadius = 5f;
 
+    // use separate vars so as not to accidentally overrupdate totalLevers/activatedLevers
     public int totalLevers = LeverManager.totalLevers;
     public int activatedLevers = LeverManager.activatedLevers;
 
@@ -44,32 +45,61 @@ public class Blackboard
             }
         }
 
-        // transient
+        // mutable
         if (fact.Type == FactType.AgentAttacked)
         {
             health--;
             if (health == 0)
             {
                 // agent is dead
-                // delete the entire gameobject
+                // to-do: delete the entire gameobject
             }
         }
 
-        // transient
-        if (fact.Type == FactType.ZombieSeen)
+        // mutable
+        if (fact.Type == FactType.LeverSearchStarted)
         {
-            // how far away is the zombie?
-            // if it's within fleeDistance from AiAction, update ZombieNearby to be true
+            searchingForLever = true;
+            // agent can only search for either a lever or a barricade at once
+            searchingForBarricade = false;
+        }
+
+        // mutable
+        if (fact.Type == FactType.LeverSearchStopped)
+        {
+            searchingForLever = false;
+        }
+
+        // mutable
+        if (fact.Type == FactType.BarricadeSearchStarted)
+        {
+            searchingForBarricade = true;
+            searchingForLever = false;
+        }
+
+        // mutable
+        if (fact.Type == FactType.BarricadeSearchStopped)
+        {
+            searchingForBarricade = false;
         }
     }
 
-    // update ALL transient facts
+    // update ALL transient facts with their current state in the game
     public void updateTransientFacts(IReadOnlyList<Fact> transientFacts)
     {
         foreach (Fact fact in transientFacts)
         {
-            // update with current state of transient facts in the game
-            // will prolly involve me using DetectObjects in AiAction
+            // transient
+            if (fact.Type == FactType.ZombieSeen)
+            {
+                numZombiesNearby++;
+
+                // keep only the distance of the closest zombie
+                if (fact.Distance < closestZombieDistance)
+                {
+                    closestZombieDistance = fact.Distance;
+                }
+            }
         }
     }
 
@@ -77,11 +107,11 @@ public class Blackboard
     // only clear bools that were changed by updateTransientFacts()
     public void clearTransientState(IReadOnlyList<Fact> transientFacts)
     {
-        foreach (Fact fact in transientFacts)
-        {
-            // reset all fact values!
-            numZombiesNearby = 0;
-            closestZombieDistance = 0;
-        }
+        // reset ALL transient facts!
+        numZombiesNearby = 0;
+        closestZombieDistance = 0;
+
+        canSeeLever = false;
+        canSeeBarricade = false;
     }
 }

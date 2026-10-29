@@ -5,7 +5,11 @@ public enum FactType
 {
     LeverActivated,
     AgentAttacked,
-    ZombieSeen
+    ZombieSeen,
+    LeverSearchStarted,
+    LeverSearchStopped,
+    BarricadeSearchStarted,
+    BarricadeSearchStopped
 }
 
 public enum FactLifetime

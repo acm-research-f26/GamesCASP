@@ -29,7 +29,11 @@ public class BehaviorTree : IAgentStrategy
 
         state.updateTransientFacts(transientFacts);
 
-        // call Execute on the AiAction object
+        // run the behavior tree and choose an action from it
+        string action = ""; // replace "" with calling the behavior tree that returns a string from an action node
+
+        // execute the action we decided by calling ExecuteAction on the AiAction object
+        aiAction.Execute(action, target);
 
         // after executing an action, clear all the current transient facts
         state.clearTransientState(transientFacts);
