@@ -19,6 +19,7 @@ public class Zombie : MonoBehaviour
 
     private Agent targetAgent;
     private SpriteRenderer spriteRenderer;
+    private SpriteRenderer hitPlayer;
     private float lastAttackTime = 0f;
 
     private void Start()
@@ -63,9 +64,26 @@ public class Zombie : MonoBehaviour
             Debug.Log($"{name} attacks {targetAgent.name}!");
 
             lastAttackTime = Time.time;
+            FlashRed(targetAgent.GetComponent<SpriteRenderer>());
 
             targetAgent.SetHealth(targetAgent.Health - attackDamage);
         }
+    }
+
+    private void FlashRed(SpriteRenderer player)
+    {
+        if (hitPlayer != null)
+            hitPlayer.color = new Color(1f, 1f, 1f, hitPlayer.color.a);
+        hitPlayer = player;
+        hitPlayer.color = new Color(1f, 0f, 0f, hitPlayer.color.a);
+        CancelInvoke("ResetColor");
+        Invoke("ResetColor", 0.2f);
+    }
+
+    private void ResetColor()
+    {
+        if (hitPlayer != null)
+            hitPlayer.color = new Color(1f, 1f, 1f, hitPlayer.color.a);
     }
 
     // Find the nearest living innocent NPC.

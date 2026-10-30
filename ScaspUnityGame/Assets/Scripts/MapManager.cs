@@ -13,6 +13,7 @@ public class MapManager : MonoBehaviour
     public int numWindows = 3;
     public int numLevers = 2;
 
+    public bool advancedMap = true;
 
     // Original wall positions
     private List<Vector3> positions = new List<Vector3>()
@@ -56,6 +57,7 @@ public class MapManager : MonoBehaviour
     };
 
     List<Vector3> spawnedWindowPositions = new List<Vector3>();
+    private List<Collider2D> spawnedWalls = new List<Collider2D>();
 
 
     // Window is 32 pixels wide at 32 PPU.
@@ -103,10 +105,20 @@ public class MapManager : MonoBehaviour
             }
         }
 
+        if (advancedMap)
+        {
+            CreateWall(new Vector3(0f, 0.95f, 0f), true, 2.5f);
+            CreateWall(new Vector3(0f, 0.95f, 0f), false, 2.5f);
+            CreateWall(new Vector3(-3.955f, 0.95f, 0f), true, 1.25f);
+            CreateWall(new Vector3(3.975f, 0.95f, 0f), true, 1.25f);
+            CreateWall(new Vector3(0f, 4.725f, 0f), false, 1.25f);
+            CreateWall(new Vector3(0f, -2.825f, 0f), false, 1.25f);
+        }
 
         //generate levers
         leverManager.totalLevers = numLevers;
 
+        int spawnRetries = 0;
         for (int i = 0; i < numLevers; i++)
         {
             int index = Random.Range(0, LeverPositions.Count);
@@ -115,6 +127,20 @@ public class MapManager : MonoBehaviour
             position.y *= Random.Range(1, 4);
 
             GameObject lever = Instantiate(leverPrefab, position, Quaternion.identity);
+            Physics2D.SyncTransforms();
+            Bounds leverBounds = lever.GetComponent<SpriteRenderer>().bounds;
+            leverBounds.Encapsulate(lever.GetComponent<Collider2D>().bounds);
+            if (spawnedWalls.Exists(wall => wall.bounds.Intersects(leverBounds)))
+            {
+                Destroy(lever);
+                if (++spawnRetries >= 100)
+                {
+                    leverManager.totalLevers = i;
+                    break;
+                }
+                i--;
+                continue;
+            }
             lever.name = $"lever_{i + 1}";
             LeverScript leverScript = lever.GetComponent<LeverScript>();
             leverScript.leverManager = leverManager;
@@ -173,5 +199,6 @@ public class MapManager : MonoBehaviour
         scale.x = length;
 
         wall.transform.localScale = scale;
+        spawnedWalls.Add(wall.GetComponent<Collider2D>());
     }
 }
