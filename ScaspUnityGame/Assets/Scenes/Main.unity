@@ -568,6 +568,7 @@ MonoBehaviour:
   leverManager: {fileID: 190084542}
   numWindows: 3
   numLevers: 2
+  advancedMap: 1
 --- !u!114 &190084542
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7288,6 +7289,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerManager
   spawnSpacing: 2
   spawnPosition: {x: 0, y: 0}
+  decisionInterval: 1
   playerPrefab: {fileID: 8838343777709214332, guid: 33ba18699b53c1a4e91eac3dafd22ced, type: 3}
   players: []
 --- !u!1 &2109457412
