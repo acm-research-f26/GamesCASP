@@ -65,12 +65,14 @@ active_half_zombie(Actor) :-
 candidate_action(attack_human(Target), Actor) :-
     can_act(Actor),
     active_half_zombie(Actor),
+    critical_bite_stage(Actor),
     preferred_human_target(Target, Actor),
     within_bite_range(Target, Actor).
 
 candidate_action(move_to_human(Target), Actor) :-
     can_act(Actor),
     active_half_zombie(Actor),
+    critical_bite_stage(Actor),
     preferred_human_target(Target, Actor),
     not within_bite_range(Target, Actor).
 
@@ -78,7 +80,7 @@ candidate_action(wait, Actor) :-
     can_act(Actor),
     active_half_zombie(Actor),
     not innocent(Actor),
-    not visible_human_target(Actor),
+    not critical_bite_stage(Actor),
     not immediate_danger(Actor).
 
 % Expiry/elimination blocks EVERY action, including inherited innocent actions.
@@ -100,31 +102,7 @@ defeated(Action, Actor) :-
     critical_bite_stage(Actor),
     not critical_bite_action(Action).
 
-% The important exception: danger only defeats biting OUTSIDE the critical
-% stage. An additional candidate rule cannot undo an existing defeated rule.
-defeated(attack_human(_), Actor) :-
-    immediate_danger(Actor),
-    not critical_bite_stage(Actor).
-
-defeated(move_to_human(_), Actor) :-
-    immediate_danger(Actor),
-    not critical_bite_stage(Actor).
-
-% Outside the critical stage, preserve the first draft's human-hunting priority.
-defeated(hold_barricade(_), Actor) :-
-    visible_human_target(Actor).
-
-defeated(move_to_barricade(_), Actor) :-
-    visible_human_target(Actor).
-
-defeated(pull_lever(_), Actor) :-
-    visible_human_target(Actor).
-
-defeated(move_to_lever(_), Actor) :-
-    visible_human_target(Actor).
-
-defeated(hunt_lever, Actor) :-
-    visible_human_target(Actor).
-
-defeated(wait, Actor) :-
-    visible_human_target(Actor).
+% Above 15 seconds remaining, attack/approach are not candidates at all.
+% Leave inherited innocent priorities untouched, even when a human is visible.
+% During the critical stage, the whitelist defeats fleeing and human objectives;
+% no danger defeater blocks the critical-only attack/approach candidates.

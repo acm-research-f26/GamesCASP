@@ -3,7 +3,10 @@
 % few "necessary" rules and actions (namely, the infected
 % statuses)
 
-% Include this file instead of innocent_behavior.pl when trying the draft.
+% Historical untimed draft, retained for comparison and its original tests.
+% For the current policy (innocent behavior until 15 seconds remain), load
+% half_zombie_timed_behavior.pl INSTEAD of this file. Do not load both.
+% This earlier draft hunts whenever an eligible human is visible.
 % Reuse human objectives, zombie fleeing, health checks and action/2 unchanged.
 #include('innocent_behavior.pl').
 #include('half_zombie_rules.pl').
@@ -19,7 +22,8 @@ candidate_action(move_to_human(Target), Actor) :-
     not within_bite_range(Target, Actor).
 
 % A half zombie without the innocent role still has an idle fallback.
-% Infected innocents instead retain their existing human objectives when alone.
+% In this untimed draft, infected innocents retain human objectives only when
+% no eligible human target is visible. The timed draft uses the timer instead.
 candidate_action(wait, Actor) :-
     can_act(Actor),
     half_zombie(Actor),

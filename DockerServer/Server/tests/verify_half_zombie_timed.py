@@ -23,7 +23,20 @@ def clock(now, start=100):
 SCENARIOS = [
     ("initial window lasts 30 seconds", HALF + TARGET + clock(100),
      "bite_time_remaining(30, actor), active_half_zombie(actor), not critical_bite_stage(actor)",
-     {"attack_human(target)"}),
+     {"hunt_lever"}),
+    ("visible human does not trigger hunting just above threshold", HALF + TARGET + clock(114.9),
+     "not critical_bite_stage(actor)", {"hunt_lever"}),
+    ("distant human does not trigger approaching before critical stage", HALF + HUMAN
+     + "distance(target, 3, actor)." + clock(100),
+     "not critical_bite_stage(actor)", {"hunt_lever"}),
+    ("visible human does not interrupt lever activation", HALF + TARGET + clock(100)
+     + "lever_visible(lever, actor). lever_state(lever, unpulled). "
+     "distance(lever, 1, actor). nearest_zombie_distance_to_lever(lever, 10).",
+     "not critical_bite_stage(actor)", {"pull_lever(lever)"}),
+    ("visible human does not interrupt barricade duty", HALF + TARGET + clock(100)
+     + "barricade_visible(window, actor). distance(window, 1, actor). "
+     "zombie(z). zombie_distance_to_barricade(window, 1, z).",
+     "not critical_bite_stage(actor)", {"hold_barricade(window)"}),
     ("above threshold danger still wins", HALF + TARGET + DANGER + clock(114.9),
      "not critical_bite_stage(actor)", {"run_from(z)"}),
     ("15 seconds is critical and overrides fleeing", HALF + TARGET + DANGER + clock(115),
@@ -48,6 +61,8 @@ SCENARIOS = [
      "half_zombie(actor)." + clock(115), "critical_bite_stage(actor)", set()),
     ("standalone half zombie can wait before critical stage",
      "half_zombie(actor)." + clock(100), "active_half_zombie(actor)", {"wait"}),
+    ("standalone half zombie ignores visible humans before critical stage",
+     "half_zombie(actor)." + TARGET + clock(100), "active_half_zombie(actor)", {"wait"}),
     ("missing timer does not grant unlimited actions", HALF + TARGET,
      "not bite_window_active(actor), not transformed_zombie(actor)", set()),
     ("missing clock does not grant unlimited actions",
@@ -57,9 +72,9 @@ SCENARIOS = [
      "not bite_window_active(actor)", set()),
     ("ordinary innocent does not need an infection timer", "innocent(actor). current_time(200).",
      "not critical_bite_stage(actor), not eliminated(actor)", {"hunt_lever"}),
-    ("successful bite refresh snapshot grants a fresh window", HALF + TARGET + clock(125, 125)
+    ("successful bite refresh restores innocent behavior", HALF + TARGET + clock(125, 125)
      + "bit_human(actor, previous_victim).",
-     "bite_time_remaining(30, actor), not critical_bite_stage(actor)", {"attack_human(target)"}),
+     "bite_time_remaining(30, actor), not critical_bite_stage(actor)", {"hunt_lever"}),
     ("old bite history cannot stop expiry", HALF + TARGET + clock(130)
      + "bit_human(actor, previous_victim).",
      "eliminated(actor)", set()),

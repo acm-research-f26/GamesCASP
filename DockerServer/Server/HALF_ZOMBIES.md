@@ -6,7 +6,7 @@ snapshot, and query `action(Action, Actor)` as the existing Python NPC path does
 The live Python handler still loads `innocent_behavior.pl`: this draft is exercised
 separately until the new facts and actions are ready for integration.
 
-## Starting model
+## Original draft: starting model
 
 An innocent can also have the `half_zombie` status. This retains the existing
 lever/barricade behavior whenever there is no visible eligible human to hunt.
@@ -36,7 +36,7 @@ and its explicit negative is contradictory. The negative fact is currently globa
 if different observers can hold different clearance evidence, give that evidence
 an observer argument in a follow-up.
 
-## Draft policy choices
+## Original draft: policy choices
 
 1. A successful infectious bite immediately creates a half zombie. There is no
    incubation timer or cure yet; an attempted attack must not emit `bit_human`.
@@ -101,12 +101,18 @@ bite_window_started_at(100, player1).
 | `eliminated(Actor)` | Actor has left the round; every action is defeated |
 | `active_half_zombie(Actor)` | Window is active and actor is not eliminated |
 
-Above 15 seconds remaining, the original priorities apply. During the final
-15 seconds, a whitelist permits only `attack_human(Target)` and
+Above 15 seconds remaining, half zombies with the innocent role behave just like
+innocents: human visibility does not interrupt lever/barricade objectives, waiting,
+or fleeing. Neither attacking nor approaching humans is a candidate yet. Keep
+`innocent(Actor)` alongside `half_zombie(Actor)` to inherit those objectives;
+standalone half zombies without the innocent role retain an idle fallback.
+
+During the final 15 seconds, a whitelist permits only `attack_human(Target)` and
 `move_to_human(Target)`; all other candidate actions, including fleeing, waiting,
-lever tasks, and barricade tasks, are defeated. The attack/approach danger
-defeaters now include `not critical_bite_stage(Actor)`: adding an attack candidate
-alone would not override a defeat rule.
+lever tasks, and barricade tasks, are defeated. Attack/approach candidates require
+`critical_bite_stage(Actor)`. No danger defeater blocks them during that stage.
+After a valid bite refreshes the timer, they stop being candidates and innocent
+behavior resumes until the next critical stage.
 
 At exactly the deadline (start + 30), the actor transforms, is classified as a
 `zombie`, and is eliminated. The `half_zombie` input remains a history/status
@@ -135,9 +141,10 @@ docker exec gamescasp python3 -B /app/tests/verify_half_zombie_timed.py
 ```
 
 The example returns `attack_human(survivor1)` despite a nearby zombie. The timer
-runner checks 21 scenarios against the real solver, enumerating **all** surviving
+runner checks 26 scenarios against the real solver, enumerating **all** surviving
 actions, including exact/fractional thresholds, expiry, renewal snapshots, missing
-timers, no visible target, and elimination. The first draft's 23 checks remain
+timers, no visible target, elimination, and innocent behavior around visible humans
+before the critical stage and after renewal. The first draft's 23 checks remain
 available through `verify_half_zombie.py`.
 
 ## References
