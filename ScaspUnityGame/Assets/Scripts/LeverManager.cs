@@ -2,8 +2,12 @@ using UnityEngine;
 
 public class LeverManager : MonoBehaviour
 {
-    public static int totalLevers = 5;
-    public static int activatedLevers = 0;
+    public int totalLevers = 5;
+    private int activatedLevers = 0;
+
+    // Read-only instance access for each strategy's blackboard.
+    public int TotalLevers => totalLevers;
+    public int ActivatedLevers => activatedLevers;
 
     public GameObject winScreen;
     // Start is called once before the first execution of Update after the MonoBehaviour is created

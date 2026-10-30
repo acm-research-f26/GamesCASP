@@ -1,117 +1,164 @@
-using JetBrains.Annotations;
-using NUnit.Framework.Internal.Filters;
+using System;
 using System.Collections.Generic;
-using Unity.Collections;
-using Unity.VisualScripting;
-using UnityEngine;
-using static UnityEngine.GraphicsBuffer;
 
-// unity will send the game state here!
-// all nodes will read from this class
+// Per-agent knowledge. Decisions remain local to BehaviorTree.
 public class Blackboard
 {
-    private AiAction aiAction = new AiAction();
-    public bool searchingForLever; // mutable
-    public bool searchingForBarricade; // mutable
-    public bool canSeeLever; // transient
-    public bool lastLever; // permanent
-    public bool canSeeBarricade; // transient
-    public int numZombiesNearby; // transient, links to the number of "Zombie" objects in AiAction's DetectedObjects
-    public float? closestZombieDistance; // transient, updates with findNearest("Zombie") from AiAction (?)
-    public int health; // mutable, maybe updates with another variable?
+    private readonly Agent owner;
+    private readonly LeverManager leverManager;
 
-    // how far each NPC can see, same as detectionRange from AiAction
+    public bool searchingForLever; // mutable executor state
+    public bool searchingForBarricade; // mutable executor state
+    public List<Fact> visibleLevers = new List<Fact>(); // transient observations
+    public bool canSeeLever;
+    public bool lastLever; // derived mutable progress, not a permanent latch
+    public bool canSeeBarricade;
+    public List<Fact> visibleZombies = new List<Fact>();
+    public int numZombiesNearby;
+    public float? closestZombieDistance = float.PositiveInfinity;
+    public int health;
     public float visionRadius = 5f;
+    public int totalLevers;
+    public int activatedLevers;
 
-    // use separate vars so as not to accidentally overrupdate totalLevers/activatedLevers
-    public int totalLevers = LeverManager.totalLevers;
-    public int activatedLevers = LeverManager.activatedLevers;
+    public Blackboard(Agent owner, LeverManager leverManager)
+    {
+        this.owner = owner ?? throw new ArgumentNullException(nameof(owner));
+        this.leverManager = leverManager ?? throw new ArgumentNullException(nameof(leverManager));
+        RefreshPersistentState();
+    }
 
-    // update each type of fact
+    // Read authoritative components instead of making static accesses or keeping stale copies.
+    public void RefreshPersistentState()
+    {
+        health = owner.Health;
+        totalLevers = leverManager.TotalLevers;
+        activatedLevers = leverManager.ActivatedLevers;
+        lastLever = totalLevers - activatedLevers == 1;
+    }
+
+    public void RefreshSearchState(AiAction executor)
+    {
+        visionRadius = executor.detectionRange;
+        searchingForLever = executor.IsSearchingForLever;
+        searchingForBarricade = executor.IsSearchingForBarricade;
+    }
+
     public void update(Fact fact)
     {
-        // permanent
+        if (fact == null) throw new ArgumentNullException(nameof(fact));
+        if (fact.Lifetime == FactLifetime.Transient)
+            throw new ArgumentException("Transient facts must be fetched, not stored.", nameof(fact));
+
         if (fact.Type == FactType.LeverActivated)
         {
-            // activated levers in game is linked to LeverManager.cs
-            // everytime the latter updates, the former will too
-            // probably should just make a reference var for this
-            activatedLevers = LeverManager.activatedLevers;
-
-            // last lever condition
-            if (activatedLevers == (totalLevers - 1))
-            {
-                lastLever = true;
-            }
+            RefreshPersistentState();
         }
 
-        // mutable
         if (fact.Type == FactType.AgentAttacked)
         {
-            health--;
-            if (health == 0)
-            {
-                // agent is dead
-                // to-do: delete the entire gameobject
-            }
+            // Zombie.SetHealth already applies real damage. Do not decrement twice.
+            RefreshPersistentState();
         }
 
-        // mutable
         if (fact.Type == FactType.LeverSearchStarted)
         {
             searchingForLever = true;
-            // agent can only search for either a lever or a barricade at once
             searchingForBarricade = false;
         }
 
-        // mutable
         if (fact.Type == FactType.LeverSearchStopped)
         {
             searchingForLever = false;
         }
 
-        // mutable
         if (fact.Type == FactType.BarricadeSearchStarted)
         {
             searchingForBarricade = true;
             searchingForLever = false;
         }
 
-        // mutable
         if (fact.Type == FactType.BarricadeSearchStopped)
         {
             searchingForBarricade = false;
         }
     }
 
-    // update ALL transient facts with their current state in the game
     public void updateTransientFacts(IReadOnlyList<Fact> transientFacts)
     {
+        if (transientFacts == null) throw new ArgumentNullException(nameof(transientFacts));
         foreach (Fact fact in transientFacts)
         {
-            // transient
+            if (fact == null) continue;
+            if (fact.Type == FactType.LeverSeen)
+            {
+                visibleLevers.Add(fact);
+                canSeeLever = true;
+            }
+
             if (fact.Type == FactType.ZombieSeen)
             {
+                visibleZombies.Add(fact);
                 numZombiesNearby++;
-
-                // keep only the distance of the closest zombie
-                if (fact.Distance < closestZombieDistance)
-                {
+                if (fact.Distance.HasValue &&
+                    (!closestZombieDistance.HasValue || fact.Distance.Value < closestZombieDistance.Value))
                     closestZombieDistance = fact.Distance;
-                }
             }
         }
     }
 
-    // clear ALL transient facts
-    // only clear bools that were changed by updateTransientFacts()
-    public void clearTransientState(IReadOnlyList<Fact> transientFacts)
+    public void clearTransientState()
     {
-        // reset ALL transient facts!
-        numZombiesNearby = 0;
-        closestZombieDistance = 0;
-
+        visibleLevers.Clear();
+        visibleZombies.Clear();
         canSeeLever = false;
         canSeeBarricade = false;
+        numZombiesNearby = 0;
+        closestZombieDistance = float.PositiveInfinity;
+        // Mutable search flags and progress survive transient cleanup.
+    }
+
+    public Fact getClosestObservation(IReadOnlyList<Fact> observations)
+    {
+        Fact closest = null;
+        foreach (Fact observation in observations)
+        {
+            if (observation == null || !observation.Distance.HasValue) continue;
+            if (closest == null || observation.Distance.Value < closest.Distance.Value)
+                closest = observation;
+        }
+        return closest;
+    }
+
+    public Fact getPreferredVisibleLever()
+    {
+        Fact preferredLever = null;
+        foreach (Fact lever in visibleLevers)
+        {
+            if (lever == null || !lever.Distance.HasValue || !lever.NearestZombieDistance.HasValue) continue;
+            if (preferredLever == null)
+            {
+                preferredLever = lever;
+                continue;
+            }
+
+            bool leverIsSafe = lever.NearestZombieDistance.Value > 5f;
+            bool preferredIsSafe = preferredLever.NearestZombieDistance.Value > 5f;
+            if (leverIsSafe && !preferredIsSafe)
+            {
+                preferredLever = lever;
+            }
+            else if (leverIsSafe && preferredIsSafe)
+            {
+                if (lever.Distance.Value < preferredLever.Distance.Value) preferredLever = lever;
+            }
+            else if (!leverIsSafe && !preferredIsSafe)
+            {
+                if (lever.NearestZombieDistance.Value > preferredLever.NearestZombieDistance.Value)
+                    preferredLever = lever;
+            }
+            // Equal-ranked candidates retain the first observed lever.
+        }
+        return preferredLever;
     }
 }

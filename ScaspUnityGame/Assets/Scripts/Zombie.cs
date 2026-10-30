@@ -2,12 +2,17 @@ using UnityEngine;
 
 public class Zombie : MonoBehaviour
 {
+    // Runtime identity stays unique across prefab clones and stable across renames.
+    // It is not serialized, so spawning a prefab creates a new identity.
+    public string EntityId { get; } = "zombie_" + System.Guid.NewGuid().ToString("N");
+
     [Header("Movement")]
     public float moveSpeed = 2f;
 
     [Header("Combat")]
     public float attackRange = 1f;
     public float attackCooldown = 1f;
+    public int attackDamage = 1;
 
     [Header("References")]
     public PlayerManager playerManager;
@@ -15,6 +20,13 @@ public class Zombie : MonoBehaviour
     private Agent targetAgent;
     private SpriteRenderer spriteRenderer;
     private float lastAttackTime = 0f;
+
+    private void Awake()
+    {
+        // A unique valid atom doubles as this clone's executor target name.
+        // Keep the existing EntityId API used by current main's s(CASP) code.
+        gameObject.name = EntityId;
+    }
 
     private void Start()
     {
@@ -59,7 +71,7 @@ public class Zombie : MonoBehaviour
 
             lastAttackTime = Time.time;
 
-            // TODO: Apply damage to Agent using SetHealth().
+            targetAgent.SetHealth(targetAgent.Health - attackDamage);
         }
     }
 
@@ -84,6 +96,11 @@ public class Zombie : MonoBehaviour
         }
 
         return nearestAgent;
+    }
+
+    void OnTriggerEnter2D(Collider2D other)
+    {
+        Debug.Log($"Colliding with object: {other.name}");
     }
 }
 

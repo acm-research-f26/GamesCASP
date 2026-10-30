@@ -51,7 +51,7 @@ public class Agent_Parent_Script : MonoBehaviour
         }
 
         // Copy the backend result so an earlier query remains a stable snapshot.
-        var facts = strategy.FetchTransientFacts();
+        var facts = aiAction.FetchTransientFacts();
         if (facts == null)
             throw new System.InvalidOperationException("Strategies must return an empty collection, not null.");
         var snapshot = new System.Collections.Generic.List<Fact>(facts);

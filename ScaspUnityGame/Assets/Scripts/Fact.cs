@@ -6,6 +6,7 @@ public enum FactType
     LeverActivated,
     AgentAttacked,
     ZombieSeen,
+    LeverSeen,
     LeverSearchStarted,
     LeverSearchStopped,
     BarricadeSearchStarted,
@@ -27,9 +28,10 @@ public sealed class Fact
     public string SubjectId { get; }
     public string TargetId { get; }
     public float? Distance { get; }
+    public float? NearestZombieDistance { get; }
 
     public Fact(FactType type, FactLifetime lifetime, string subjectId, string targetId = null,
-        float? distance = null)
+        float? distance = null, float? nearestZombieDistance = null)
     {
         if (!Enum.IsDefined(typeof(FactType), type))
             throw new ArgumentOutOfRangeException(nameof(type));
@@ -40,6 +42,12 @@ public sealed class Fact
         if (distance.HasValue && (float.IsNaN(distance.Value) || float.IsInfinity(distance.Value) || distance.Value < 0))
             throw new ArgumentOutOfRangeException(nameof(distance));
 
+        // Infinity is meaningful here: no zombie is present anywhere in the snapshot.
+        if (nearestZombieDistance.HasValue &&
+            (float.IsNaN(nearestZombieDistance.Value) || nearestZombieDistance.Value < 0f))
+            throw new ArgumentOutOfRangeException(nameof(nearestZombieDistance));
+
+        NearestZombieDistance = nearestZombieDistance;
         Type = type;
         Lifetime = lifetime;
         SubjectId = subjectId;
