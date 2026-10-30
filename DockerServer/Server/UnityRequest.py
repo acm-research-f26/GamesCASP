@@ -204,7 +204,7 @@ class UnityNPCDecisionRequest(UnityActionRequest):
 
             query_file.write_text(
                 f"#include('{snapshot_file.name}').\n"
-                f"#include('innocent_behavior.pl').\n\n"
+                f"#include('half_zombie_timed_behavior.pl').\n\n"
                 f"?- action(X, {actor}).\n",
                 encoding="utf-8"
             )
