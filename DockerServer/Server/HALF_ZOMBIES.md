@@ -74,6 +74,72 @@ real solver on isolated temporary snapshots and leaves the live session untouche
 It checks positive decisions, rejected competing actions, observer isolation,
 infection direction, range boundaries, targeting, fallback objectives, and death.
 
+## Second draft: timed survival and the critical defeat exception
+
+The original draft is committed as `b4faf2b`. The separate entrypoint
+`half_zombie_timed_behavior.pl` adds the survival timer. Load it **instead of**
+`half_zombie_behavior.pl`; including both would retain the original unconditional
+danger defeaters and block attacking even during the critical stage.
+
+Supply a snapshot with one current game-time value and one current window start
+for each half zombie, all in seconds:
+
+```prolog
+current_time(115).
+bite_window_started_at(100, player1).
+```
+
+| Predicate | Meaning |
+| --- | --- |
+| `bite_window_seconds(30)` | Fixed length of each bite window |
+| `critical_bite_seconds(15)` | Critical threshold in seconds remaining |
+| `bite_time_remaining(Remaining, Actor)` | Window start + 30 - current time |
+| `bite_window_active(Actor)` | Current time is within the window, before expiry |
+| `critical_bite_stage(Actor)` | More than 0 and at most 15 seconds remain |
+| `bite_window_expired(Actor)` | Zero or fewer seconds remain |
+| `transformed_zombie(Actor)` | Expiry has caused transformation |
+| `eliminated(Actor)` | Actor has left the round; every action is defeated |
+| `active_half_zombie(Actor)` | Window is active and actor is not eliminated |
+
+Above 15 seconds remaining, the original priorities apply. During the final
+15 seconds, a whitelist permits only `attack_human(Target)` and
+`move_to_human(Target)`; all other candidate actions, including fleeing, waiting,
+lever tasks, and barricade tasks, are defeated. The attack/approach danger
+defeaters now include `not critical_bite_stage(Actor)`: adding an attack candidate
+alone would not override a defeat rule.
+
+At exactly the deadline (start + 30), the actor transforms, is classified as a
+`zombie`, and is eliminated. The `half_zombie` input remains a history/status
+marker; use `active_half_zombie` to ask whether the actor is still playable.
+Eliminated actors cannot perform even inherited innocent actions. A missing
+clock/start or future window start also blocks half-zombie actions, without
+claiming that transformation is proven.
+
+**Window renewal assumption:** each successful bite before expiry starts another
+30-second window. The game/server must replace the actor's window-start snapshot
+with that bite's timestamp; attempted attacks and historical `bit_human/2` facts
+do not reset the clock. A bite at or after expiry is too late. This pure reasoning
+draft does not run a clock, mutate timestamps, or remove Unity objects. The caller
+must check expiry before accepting a renewal, retain `eliminated(Actor)` once
+eliminated, and remove the actor from round participation. A retained elimination
+fact blocks actions even if a later snapshot accidentally supplies a new start.
+
+If no eligible human is visible during the critical stage, there is **no available
+action**. This is deliberate: the draft does not invent an unseen target or
+silently fall back to human objectives. A later search behavior needs an explicit
+policy decision and an additional permitted action.
+
+```powershell
+docker exec gamescasp scasp -s1 /app/tests/half_zombie_timed_example.pl
+docker exec gamescasp python3 -B /app/tests/verify_half_zombie_timed.py
+```
+
+The example returns `attack_human(survivor1)` despite a nearby zombie. The timer
+runner checks 21 scenarios against the real solver, enumerating **all** surviving
+actions, including exact/fractional thresholds, expiry, renewal snapshots, missing
+timers, no visible target, and elimination. The first draft's 23 checks remain
+available through `verify_half_zombie.py`.
+
 ## References
 
 - [s(CASP) Tutorial and User Manual](https://personal.utdallas.edu/~gupta/nfm-ex/scasp-manual.pdf),
