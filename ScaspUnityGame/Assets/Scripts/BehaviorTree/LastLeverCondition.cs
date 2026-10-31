@@ -1,15 +1,7 @@
-using UnityEngine;
-
-public class LastLeverCondition : ConditionNode
+public sealed class LastLeverCondition : ConditionNode
 {
-    // evaluate whether or not a lever is the last one
-    public override bool evaluate()
-    {
-        if (state.lastLever)
-        {
-            return true;
-        }
+    public LastLeverCondition(Node leftNode, Node rightNode) : base(leftNode, rightNode) { }
 
-        return false;
-    }
+    // Keep your boolean. Refresh it from counts when initializing and on activation.
+    public override bool evaluate(Blackboard state) => state.lastLever;
 }
