@@ -69,6 +69,10 @@ public class PlayerManager : MonoBehaviour
                     // THIS is where the snippet from INTEGRATION.md belongs.
                     var tree = new BehaviorTree(agent.GetComponent<AiAction>(), leverManager);
                     agent.SetStrategy(tree, "behavior_tree");
+                    if (tree != null) 
+                        StartCoroutine(RunNpcDecisionLoop(agent, null));
+                    else 
+                        Debug.LogWarning($"{actorId}: Missing ScaspStrategy or ScaspClient.", npc);
                 }
                 else
                 {
@@ -80,8 +84,10 @@ public class PlayerManager : MonoBehaviour
                     client.enabled = true;
                     agent.SetStrategy(strategy, "scasp");
                     // Refresh each NPC's observations and decision on a regular game-time interval.
-                    if (strategy != null && client != null) StartCoroutine(RunNpcDecisionLoop(agent, client));
-                    else Debug.LogWarning($"{actorId}: Missing ScaspStrategy or ScaspClient.", npc);
+                    if (strategy != null && client != null) 
+                        StartCoroutine(RunNpcDecisionLoop(agent, client));
+                    else 
+                        Debug.LogWarning($"{actorId}: Missing ScaspStrategy or ScaspClient.", npc);
                 }
 
                 players.Add(agent);
@@ -97,15 +103,21 @@ public class PlayerManager : MonoBehaviour
     {
         // Let all Start-button handlers finish map/progress initialization first.
         yield return null;
-
-        while (agent != null && client != null)
+        bool usesScasp = client != null;
+        while (agent != null)
         {
-            if (agent.isActiveAndEnabled && agent.Health > 0 && client.IsConnected)
+            if (agent.isActiveAndEnabled && agent.Health > 0 &&
+                (!usesScasp || (client != null && client.IsConnected)))
                 agent.RequestDecision();
 
+            if(usesScasp && !client.IsConnected)
+            {
+                break;
+            }
             // ScaspStrategy coalesces requests while a previous decision is pending.
             // Game-time waits also pause with Time.timeScale.
             yield return new WaitForSeconds(Mathf.Max(0.1f, decisionInterval));
         }
     }
+
 }
