@@ -95,6 +95,7 @@ GameObject:
   - component: {fileID: 477217731706614787}
   - component: {fileID: 2728016071441532600}
   - component: {fileID: 7207211578970807734}
+  - component: {fileID: -8533449121618008555}
   m_Layer: 3
   m_Name: survivorPrefab
   m_TagString: Player
@@ -269,6 +270,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Agent
   strategyComponent: {fileID: 477217731706614787}
+  stratName: 
   health: 3
   role: innocent
 --- !u!114 &4180092995283551806
@@ -321,6 +323,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ScaspClient
   serverUrl: ws://localhost:6767
+  factAcknowledgmentTimeout: 10
   onAction:
     m_PersistentCalls:
       m_Calls: []
@@ -336,3 +339,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79b442db85c746869ed933435cb64412, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AgentFactReceiver
+--- !u!114 &-8533449121618008555
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8838343777709214332}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 496cddda645788044b74f00c34bf1514, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BehaviorTree

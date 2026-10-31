@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 
 public enum NpcDecisionBackend { BehaviorTree, Scasp }
 
@@ -67,8 +68,16 @@ public class PlayerManager : MonoBehaviour
                 if (decisionBackend == NpcDecisionBackend.BehaviorTree)
                 {
                     // THIS is where the snippet from INTEGRATION.md belongs.
-                    var tree = new BehaviorTree(agent.GetComponent<AiAction>(), leverManager);
+
+                    BehaviorTree tree = npc.GetComponent<BehaviorTree>();
+                    if (tree == null)
+                        tree = npc.AddComponent<BehaviorTree>();
+
+                    tree.enabled = true;
                     agent.SetStrategy(tree, "behavior_tree");
+
+                    tree.SetInitialValues(agent.GetComponent<AiAction>(), leverManager);
+
                     if (tree != null) 
                         StartCoroutine(RunNpcDecisionLoop(agent, null));
                     else 
@@ -77,7 +86,8 @@ public class PlayerManager : MonoBehaviour
                 else
                 {
                     ScaspStrategy strategy = npc.GetComponent<ScaspStrategy>();
-                    if (strategy == null) strategy = npc.AddComponent<ScaspStrategy>();
+                    if (strategy == null) 
+                        strategy = npc.AddComponent<ScaspStrategy>();
                     client = npc.GetComponent<ScaspClient>();
                     strategy.SetActorId(actorId);
                     strategy.enabled = true;
@@ -110,10 +120,6 @@ public class PlayerManager : MonoBehaviour
                 (!usesScasp || (client != null && client.IsConnected)))
                 agent.RequestDecision();
 
-            if(usesScasp && !client.IsConnected)
-            {
-                break;
-            }
             // ScaspStrategy coalesces requests while a previous decision is pending.
             // Game-time waits also pause with Time.timeScale.
             yield return new WaitForSeconds(Mathf.Max(0.1f, decisionInterval));

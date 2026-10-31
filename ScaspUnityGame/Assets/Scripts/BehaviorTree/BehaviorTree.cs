@@ -3,18 +3,18 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // Plain C# strategy, one instance per agent. Do not attach it as a component.
-public sealed class BehaviorTree : IAgentStrategy
+public sealed class BehaviorTree : MonoBehaviour, IAgentStrategy
 {
-    private readonly Agent owner;
-    private readonly AiAction aiAction;
-    private readonly Blackboard state;
+    private Agent owner;
+    private AiAction aiAction;
+    private Blackboard state;
     private readonly BarricadeObservationBuffer barricades = new BarricadeObservationBuffer();
-    private readonly Node root;
+    private Node root;
 
     public Blackboard State => state;
     public (string action, string target) LastDecision { get; private set; }
 
-    public BehaviorTree(AiAction aiAction, LeverManager leverManager)
+    public void SetInitialValues(AiAction aiAction, LeverManager leverManager)
     {
         if (aiAction == null) throw new ArgumentNullException(nameof(aiAction));
         if (leverManager == null) throw new ArgumentNullException(nameof(leverManager));
