@@ -35,8 +35,7 @@ public class Agent : Agent_Parent_Script
             }
             AiAction movement = GetComponent<AiAction>();
 
-            if (movement != null)
-                movement.enabled = false;
+            if (movement != null) movement.enabled = false;
         }
 
 

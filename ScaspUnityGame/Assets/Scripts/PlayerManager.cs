@@ -1,88 +1,123 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
+
+public enum NpcDecisionBackend { BehaviorTree, Scasp }
 
 public class PlayerManager : MonoBehaviour
 {
     [Header("NPC Settings")]
     [SerializeField] private float spawnSpacing = 2f;
     [SerializeField] private Vector2 spawnPosition = Vector2.zero;
-    [Tooltip("Seconds between NPC decision requests. Each request refreshes transient observations.")]
-    [SerializeField, Min(0.1f)] private float decisionInterval = 1f;
+    [SerializeField, Min(0.1f)] private float decisionInterval = 0.5f;
+    [SerializeField] private NpcDecisionBackend decisionBackend = NpcDecisionBackend.BehaviorTree;
+    [SerializeField] private LeverManager leverManager;
 
     [Header("NPC Prefabs")]
     public GameObject playerPrefab;
-
-    // Track all spawned innocent NPCs.
     public List<Agent> players = new List<Agent>();
-
     private bool gameStarted;
 
-    // Called when the Start Game button is clicked.
     public void StartGameClicked()
     {
-        if (gameStarted)
-        {
-            Debug.LogWarning("NPCs have already been spawned.", this);
-            return;
-        }
-
+        if (gameStarted) return;
         if (playerPrefab == null || playerPrefab.GetComponent<Agent>() == null)
         {
             Debug.LogError("Assign an NPC prefab containing Agent.cs.", this);
             return;
         }
-
-        int numInnocents = GameSettings.InnocentCount;
-
-        if (numInnocents <= 0)
+        if (leverManager == null) leverManager = FindAnyObjectByType<LeverManager>();
+        if (decisionBackend == NpcDecisionBackend.BehaviorTree && leverManager == null)
         {
-            Debug.LogWarning("No innocent NPCs configured.", this);
+            Debug.LogError("Assign the map's LeverManager before spawning tree agents.", this);
             return;
         }
-
+        int count = GameSettings.InnocentCount;
+        if (count <= 0) return;
         gameStarted = true;
 
-        for (int i = 0; i < numInnocents; i++)
+        // The inactive parent prevents prefab clients from connecting before we select a backend.
+        var staging = new GameObject("NPC initialization");
+        staging.SetActive(false);
+        try
         {
-            // Spawn each NPC at a different position.
-            Vector2 position = spawnPosition + new Vector2(i * spawnSpacing, 0f);
+            for (int i = 0; i < count; i++)
+            {
+                GameObject npc = Instantiate(playerPrefab, staging.transform);
+                npc.SetActive(false);
+                Agent agent = npc.GetComponent<Agent>();
+                Vector2 position = spawnPosition + new Vector2(i * spawnSpacing, 0f);
+                agent.Initialize("innocent", position.x, position.y);
+                // Assign each NPC a unique Prolog actor ID.
+                string actorId = $"player{i + 1}";
+                npc.name = actorId;
 
-            GameObject npc = Instantiate(playerPrefab);
-            Agent agent = npc.GetComponent<Agent>();
-            ScaspStrategy strategy = npc.GetComponent<ScaspStrategy>();
-            ScaspClient client = npc.GetComponent<ScaspClient>();
+                // Only one backend controls a clone, regardless of prefab Inspector assignment.
+                foreach (MonoBehaviour component in npc.GetComponents<MonoBehaviour>())
+                    if (component is IAgentStrategy) component.enabled = false;
+                foreach (ScaspClient existingClient in npc.GetComponentsInChildren<ScaspClient>(true))
+                    existingClient.enabled = false;
 
-            // Initialize the NPC.
-            agent.Initialize("innocent", position.x, position.y);
+                ScaspClient client;
 
-            // Assign each NPC a unique Prolog actor ID.
-            string actorId = $"player{i + 1}";
+                npc.transform.SetParent(null, true);
+                npc.SetActive(true);
 
-            if (strategy != null)
-                strategy.SetActorId(actorId);
 
-            players.Add(agent);
+                if (decisionBackend == NpcDecisionBackend.BehaviorTree)
+                {
+                    // THIS is where the snippet from INTEGRATION.md belongs.
 
-            Debug.Log($"Spawned innocent NPC: {actorId} at {position}", npc);
+                    BehaviorTree tree = npc.GetComponent<BehaviorTree>();
+                    if (tree == null)
+                        tree = npc.AddComponent<BehaviorTree>();
 
-            // Refresh each NPC's observations and decision on a regular game-time interval.
-            if (strategy != null && client != null)
-                StartCoroutine(RunNpcDecisionLoop(agent, client));
-            else
-                Debug.LogWarning($"{actorId}: Missing ScaspStrategy or ScaspClient.", npc);
+                    tree.enabled = true;
+                    agent.SetStrategy(tree, "behavior_tree");
+
+                    tree.SetInitialValues(agent.GetComponent<AiAction>(), leverManager);
+
+                    if (tree != null) 
+                        StartCoroutine(RunNpcDecisionLoop(agent, null));
+                    else 
+                        Debug.LogWarning($"{actorId}: Missing ScaspStrategy or ScaspClient.", npc);
+                }
+                else
+                {
+                    ScaspStrategy strategy = npc.GetComponent<ScaspStrategy>();
+                    if (strategy == null) 
+                        strategy = npc.AddComponent<ScaspStrategy>();
+                    client = npc.GetComponent<ScaspClient>();
+                    strategy.SetActorId(actorId);
+                    strategy.enabled = true;
+                    client.enabled = true;
+                    agent.SetStrategy(strategy, "scasp");
+                    // Refresh each NPC's observations and decision on a regular game-time interval.
+                    if (strategy != null && client != null) 
+                        StartCoroutine(RunNpcDecisionLoop(agent, client));
+                    else 
+                        Debug.LogWarning($"{actorId}: Missing ScaspStrategy or ScaspClient.", npc);
+                }
+
+                players.Add(agent);
+
+                Debug.Log($"Spawned innocent NPC: {actorId} at {position}", npc);
+
+            }
         }
-
-        Debug.Log($"Successfully spawned {players.Count} innocent NPC(s).", this);
+        finally { Destroy(staging); }
     }
 
     private IEnumerator RunNpcDecisionLoop(Agent agent, ScaspClient client)
     {
-        yield return new WaitUntil(() => agent == null || client == null || client.IsConnected);
-
-        while (agent != null && client != null)
+        // Let all Start-button handlers finish map/progress initialization first.
+        yield return null;
+        bool usesScasp = client != null;
+        while (agent != null)
         {
-            if (agent.isActiveAndEnabled && agent.Health > 0 && client.IsConnected)
+            if (agent.isActiveAndEnabled && agent.Health > 0 &&
+                (!usesScasp || (client != null && client.IsConnected)))
                 agent.RequestDecision();
 
             // ScaspStrategy coalesces requests while a previous decision is pending.
@@ -90,5 +125,5 @@ public class PlayerManager : MonoBehaviour
             yield return new WaitForSeconds(Mathf.Max(0.1f, decisionInterval));
         }
     }
-}
 
+}

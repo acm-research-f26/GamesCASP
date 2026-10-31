@@ -31,6 +31,8 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
     // Includes an in-flight fact until Python acknowledges persistence.
     public int PendingFactCount => storedFacts.Count;
 
+    public LeverManager levManager;
+
     private void Awake()
     {
         agent = GetComponent<Agent>();
@@ -38,6 +40,12 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
 
         if (client == null)
             client = GetComponent<ScaspClient>();
+
+        levManager = FindAnyObjectByType<LeverManager>();
+        if(levManager == null)
+        {
+            Debug.LogError("unable to find lever manager.");
+        }
     }
 
     // Assign a unique Prolog identity to each NPC.
@@ -206,74 +214,43 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
     private NpcState BuildNpcState()
     {
         var transientFacts = aiAction.FetchTransientFacts();
-        GameObject[] allLevers = System.Array.ConvertAll(FindObjectsByType<LeverScript>(FindObjectsSortMode.None), lever => lever.gameObject);
-        GameObject[] allZombies = System.Array.ConvertAll(FindObjectsByType<Zombie>(FindObjectsSortMode.None), zombie => zombie.gameObject);
-
-        HashSet<GameObject> visibleObjects = new HashSet<GameObject>();
-
-        foreach (AiAction.DetectedObject detected in aiAction.detectedObjects)
-        {
-            if (detected.obj != null)
-                visibleObjects.Add(detected.obj);
-        }
 
         List<NpcLeverState> levers = new List<NpcLeverState>();
         List<NpcZombieState> zombies = new List<NpcZombieState>();
 
-        int pulledCount = 0;
-
         // Collect lever state, visibility, and distances.
-        foreach (GameObject leverObject in allLevers)
-        {
-            LeverScript lever = leverObject.GetComponent<LeverScript>();
-
-            if (lever == null)
-                continue;
-
-            if (!IsValidAtom(leverObject.name))
-            {
-                Debug.LogError($"{name}: Invalid Prolog lever ID '{leverObject.name}'.", this);
-                return null;
-            }
-
-            if (lever.isOn)
-                pulledCount++;
-
-            float nearestZombieDistance = 9999f;
-
-            foreach (GameObject zombie in allZombies)
-            {
-                float distance = Vector2.Distance(leverObject.transform.position, zombie.transform.position);
-                nearestZombieDistance = Mathf.Min(nearestZombieDistance, distance);
-            }
-
-            levers.Add(new NpcLeverState
-            {
-                id = leverObject.name,
-                state = lever.isOn ? "pulled" : "unpulled",
-                visible = visibleObjects.Contains(leverObject),
-                distance = Vector2.Distance(transform.position, leverObject.transform.position),
-                nearest_zombie_distance = nearestZombieDistance
-            });
-        }
-
-        // Collect nearby detected zombies.
         foreach (Fact observation in transientFacts)
         {
-            if (observation.Type != FactType.ZombieSeen)
-                continue;
-
-            if (!IsValidAtom(observation.SubjectId))
+            if(!IsValidAtom(observation.SubjectId))
             {
-                Debug.LogError($"{name}: Invalid Prolog zombie ID '{observation.SubjectId}'.", this);
+                Debug.LogError($"{name}: Invalid Prolog ID '{observation.SubjectId}'.", this);
                 return null;
+
             }
 
-            zombies.Add(new NpcZombieState
+            if(observation.Type == FactType.LeverSeen)
             {
-                id = observation.SubjectId,
-                distance = observation.Distance.Value
-            });
+                levers.Add(new NpcLeverState
+                {
+                    id = observation.SubjectId,
+                    state = (observation.IsOn ?? false) ? "pulled" : "unpulled",
+                    visible = true,
+                    distance = observation.Distance ?? 0,
+                    nearest_zombie_distance = observation.NearestZombieDistance ?? 0
+                });
+            }
+            else if(observation.Type == FactType.ZombieSeen)
+            {
+                zombies.Add(new NpcZombieState
+                {
+                    id = observation.SubjectId,
+                    distance = observation.Distance ?? 0
+                });
+            }
+            else
+            {
+                Debug.LogError($"Got invalid fact type. It was: {observation.Type}");
+            }
         }
 
         // Assemble the snapshot expected by Python's FactFactory.
@@ -281,7 +258,7 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
         {
             health = agent.Health,
             levers_to_win = leversToWin,
-            levers_pulled_count = pulledCount,
+            levers_pulled_count = levManager.ActivatedLevers,
             levers = levers.ToArray(),
             zombies = zombies.ToArray(),
 

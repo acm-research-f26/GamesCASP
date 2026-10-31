@@ -1,11 +1,7 @@
-using UnityEngine;
-
-// all nodes will inherit from this
+// Nodes select a decision synchronously. AiAction performs it afterward.
 public abstract class Node
 {
-    // constructor for a node, each agent gets their own state
-    public Blackboard state;
-    
-    // condition and action nodes will override this method with their own evaluation conditions
-    public abstract bool Tick();
+    public abstract bool Tick(
+        Blackboard state,
+        out (string action, string target) decision);
 }

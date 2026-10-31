@@ -22,6 +22,13 @@ public class Zombie : MonoBehaviour
     private SpriteRenderer hitPlayer;
     private float lastAttackTime = 0f;
 
+    private void Awake()
+    {
+        // A unique valid atom doubles as this clone's executor target name.
+        // Keep the existing EntityId API used by current main's s(CASP) code.
+        gameObject.name = EntityId;
+    }
+
     private void Start()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();

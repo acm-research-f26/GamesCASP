@@ -44,6 +44,11 @@ public class AiAction : MonoBehaviour
     private bool isSearchingForBarricade;
     private float stoppingDistance;
     private float nextWanderTime;
+    private string currentAction;
+    private string currentTarget;
+
+    public bool IsSearchingForLever => isSearchingForLever;
+    public bool IsSearchingForBarricade => isSearchingForBarricade;
 
     private void Awake()
     {
@@ -96,22 +101,77 @@ public class AiAction : MonoBehaviour
     {
         transientQueryCount++;
         lastTransientQueryTime = Time.time;
-        Debug.Log($"{name}: FetchTransientFacts called at {Time.time:F2}s", this);
+
+        // Refresh observations now rather than depending on Update() timing.
         DetectObjects();
+
         var facts = new List<Fact>();
-        var seen = new HashSet<Zombie>();
+
+        // An entity can have multiple colliders, but should produce one observation.
+        var seenZombies = new HashSet<Zombie>();
+        var seenLevers = new HashSet<LeverScript>();
+        Zombie[] allZombies = FindObjectsByType<Zombie>(FindObjectsSortMode.None);
+
         foreach (var detected in detectedObjects)
         {
             if (detected.obj == null)
+            {
                 continue;
-            var zombie = detected.obj.GetComponentInParent<Zombie>();
-            if (zombie == null || !zombie.isActiveAndEnabled || !seen.Add(zombie))
-                continue;
-            facts.Add(new Fact(FactType.ZombieSeen, FactLifetime.Transient, zombie.EntityId,
-                distance: Vector2.Distance(transform.position, zombie.transform.position)));
+            }
+
+            // Zombie observation.
+            Zombie zombie = detected.obj.GetComponentInParent<Zombie>();
+
+            if (zombie != null &&
+                zombie.isActiveAndEnabled &&
+                seenZombies.Add(zombie))
+            {
+                facts.Add(new Fact(
+                    FactType.ZombieSeen,
+                    FactLifetime.Transient,
+                    zombie.gameObject.name,
+                    distance: Vector2.Distance(
+                        transform.position,
+                        zombie.transform.position)
+                ));
+            }
+
+            // Available-lever (+ threatened lever) observation.
+            LeverScript lever = detected.obj.GetComponentInParent<LeverScript>();
+
+            if (lever != null &&
+                lever.isActiveAndEnabled &&
+                seenLevers.Add(lever))
+            {
+                // Remains infinity if there are no zombies.
+                float nearestZombieDistance = float.PositiveInfinity;
+
+                foreach (Zombie zombies in allZombies)
+                {
+                    float distance = Vector2.Distance(
+                        lever.transform.position,
+                        zombies.transform.position);
+
+                    if (distance < nearestZombieDistance)
+                    {
+                        nearestZombieDistance = distance;
+                    }
+                }
+
+                facts.Add(new Fact(
+                    FactType.LeverSeen,
+                    FactLifetime.Transient,
+                    lever.gameObject.name,
+                    distance: Vector2.Distance(
+                        transform.position,
+                        lever.transform.position),
+                    nearestZombieDistance: nearestZombieDistance,
+                    isOn: lever.isOn
+                ));
+            }
         }
+
         lastTransientFactCount = facts.Count;
-        Debug.Log($"{name}: Found {facts.Count} transient facts", this);
         return facts.AsReadOnly();
     }
 
@@ -119,6 +179,17 @@ public class AiAction : MonoBehaviour
     public void Execute(string action, string target = "")
     {
         DetectObjects();
+        target = target ?? "";
+
+        // Keep searches/movement alive across identical periodic decisions.
+        // Fleeing is re-evaluated so its direction tracks a moving zombie.
+        if (action == currentAction && target == currentTarget && action != "run_from" &&
+            (isMoving || isSearchingForLever || isSearchingForBarricade ||
+             action == "wait" || action == "hold_barricade"))
+            return;
+
+        currentAction = action;
+        currentTarget = target;
         isSearchingForLever = false;
         isSearchingForBarricade = false;
         StopMovement();
@@ -245,7 +316,10 @@ public class AiAction : MonoBehaviour
 
         Debug.Log($"{name}: Holding barricade {target}");
 
-        // TODO: Connect barricade defense mechanics.
+        // Window repairs when the NPC overlaps its trigger. Approach its center
+        // rather than stopping just outside the trigger at distance one.
+        GameObject barricade = FindNearest("Barricade", target);
+        if (barricade != null) MoveToObject(barricade, 0f);
     }
 
     // Move toward the specified barricade.
@@ -324,6 +398,16 @@ public class AiAction : MonoBehaviour
     {
         isSearchingForBarricade = true;
         SearchForBarricade();
+    }
+
+    // Called on death or when a controller needs to cancel ongoing physical behavior.
+    public void StopAllActions()
+    {
+        isSearchingForLever = false;
+        isSearchingForBarricade = false;
+        currentAction = null;
+        currentTarget = "";
+        StopMovement();
     }
 
     private void StopMovement()

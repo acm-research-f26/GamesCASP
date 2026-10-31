@@ -3,6 +3,12 @@ using System.Collections.Generic;
 
 public class Window : MonoBehaviour
 {
+    private void Awake()
+    {
+        // Every runtime clone receives a unique name before agents can observe it.
+        gameObject.name = "barricade_" + System.Guid.NewGuid().ToString("N");
+    }
+
     public float health = 100;
 
     public float increaseSpeed = 10;

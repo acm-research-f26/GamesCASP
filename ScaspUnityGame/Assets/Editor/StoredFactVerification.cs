@@ -152,7 +152,7 @@ public static class StoredFactVerification
                 "Gameplay NPC prefab has a fact receiver, s(CASP) strategy, and exactly one client");
             // Unity does not call these non-ExecuteAlways lifecycle methods in Edit Mode.
             InvokeLifecycle(strategy, "Awake");
-            agent.SetStrategy(strategy);
+            agent.SetStrategy(strategy, "scasp");
             strategy.SetActorId("observer1");
             var settings = new SerializedObject(client);
             settings.FindProperty("serverUrl").stringValue = ready.url;

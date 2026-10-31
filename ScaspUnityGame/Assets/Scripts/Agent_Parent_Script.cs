@@ -15,6 +15,9 @@ public class Agent_Parent_Script : MonoBehaviour
     private AiAction aiAction;
     private IAgentStrategy Strategy => runtimeStrategy ?? (strategyComponent as IAgentStrategy) ?? GetComponent<IAgentStrategy>();
 
+    [HideInInspector]
+    public string stratName;
+
 
     private void Awake()
     {
@@ -23,9 +26,10 @@ public class Agent_Parent_Script : MonoBehaviour
 
 
     // Supports strategies created by code as well as components assigned in the Inspector.
-    public void SetStrategy(IAgentStrategy strategy)
+    public void SetStrategy(IAgentStrategy strategy, string strategyName)
     {
         runtimeStrategy = strategy ?? throw new System.ArgumentNullException(nameof(strategy));
+        stratName = strategyName;
     }
 
     // The caller controls decision timing. Asynchronous backends may execute later.

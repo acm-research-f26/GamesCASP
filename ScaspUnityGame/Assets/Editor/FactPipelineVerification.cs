@@ -129,7 +129,7 @@ public static class FactPipelineVerification
             check(nearStrategy.Decisions == 1 && nearStrategy.LastAgent == parent &&
                   decisionLogs.Contains($"{parent.name}: Pull lever lever1"),
                 "The backend that receives facts chooses an action for the same agent");
-            Expect<ArgumentNullException>(() => parent.SetStrategy(null));
+            Expect<ArgumentNullException>(() => parent.SetStrategy(null, "empty"));
             check(true, "Null strategy rejected");
 
             var inspectorObject = Make(objects, "inspector", origin);
@@ -145,7 +145,7 @@ public static class FactPipelineVerification
                 "Inspector component receives both facts and decisions");
 
             var replacement = new RecordingStrategy();
-            inspectorAgent.SetStrategy(replacement);
+            inspectorAgent.SetStrategy(replacement, "recording");
             inspectorAgent.TryStoreFact(fact);
             CaptureLogs(inspectorAgent.RequestDecision);
             check(replacement.Facts.Count == 1 && replacement.Decisions == 1 &&
@@ -208,7 +208,7 @@ public static class FactPipelineVerification
         var receiver = obj.AddComponent<AgentFactReceiver>();
         InvokeCallback(obj.GetComponent<Agent_Parent_Script>(), "Awake");
         strategy = new RecordingStrategy();
-        obj.GetComponent<Agent_Parent_Script>().SetStrategy(strategy);
+        obj.GetComponent<Agent_Parent_Script>().SetStrategy(strategy, "recording");
         obj.AddComponent<CircleCollider2D>();
         return receiver;
     }
