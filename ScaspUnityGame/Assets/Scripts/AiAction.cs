@@ -141,7 +141,6 @@ public class AiAction : MonoBehaviour
 
             if (lever != null &&
                 lever.isActiveAndEnabled &&
-                !lever.isOn &&
                 seenLevers.Add(lever))
             {
                 // Remains infinity if there are no zombies.
@@ -166,7 +165,8 @@ public class AiAction : MonoBehaviour
                     distance: Vector2.Distance(
                         transform.position,
                         lever.transform.position),
-                    nearestZombieDistance: nearestZombieDistance
+                    nearestZombieDistance: nearestZombieDistance,
+                    isOn: lever.isOn
                 ));
             }
         }

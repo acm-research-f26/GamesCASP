@@ -206,16 +206,6 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
     private NpcState BuildNpcState()
     {
         var transientFacts = aiAction.FetchTransientFacts();
-        GameObject[] allLevers = System.Array.ConvertAll(FindObjectsByType<LeverScript>(FindObjectsSortMode.None), lever => lever.gameObject);
-        GameObject[] allZombies = System.Array.ConvertAll(FindObjectsByType<Zombie>(FindObjectsSortMode.None), zombie => zombie.gameObject);
-
-        HashSet<GameObject> visibleObjects = new HashSet<GameObject>();
-
-        foreach (AiAction.DetectedObject detected in aiAction.detectedObjects)
-        {
-            if (detected.obj != null)
-                visibleObjects.Add(detected.obj);
-        }
 
         List<NpcLeverState> levers = new List<NpcLeverState>();
         List<NpcZombieState> zombies = new List<NpcZombieState>();
@@ -223,57 +213,43 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
         int pulledCount = 0;
 
         // Collect lever state, visibility, and distances.
-        foreach (GameObject leverObject in allLevers)
-        {
-            LeverScript lever = leverObject.GetComponent<LeverScript>();
-
-            if (lever == null)
-                continue;
-
-            if (!IsValidAtom(leverObject.name))
-            {
-                Debug.LogError($"{name}: Invalid Prolog lever ID '{leverObject.name}'.", this);
-                return null;
-            }
-
-            if (lever.isOn)
-                pulledCount++;
-
-            float nearestZombieDistance = 9999f;
-
-            foreach (GameObject zombie in allZombies)
-            {
-                float distance = Vector2.Distance(leverObject.transform.position, zombie.transform.position);
-                nearestZombieDistance = Mathf.Min(nearestZombieDistance, distance);
-            }
-
-            levers.Add(new NpcLeverState
-            {
-                id = leverObject.name,
-                state = lever.isOn ? "pulled" : "unpulled",
-                visible = visibleObjects.Contains(leverObject),
-                distance = Vector2.Distance(transform.position, leverObject.transform.position),
-                nearest_zombie_distance = nearestZombieDistance
-            });
-        }
-
-        // Collect nearby detected zombies.
         foreach (Fact observation in transientFacts)
         {
-            if (observation.Type != FactType.ZombieSeen)
-                continue;
-
-            if (!IsValidAtom(observation.SubjectId))
+            if(!IsValidAtom(observation.SubjectId))
             {
-                Debug.LogError($"{name}: Invalid Prolog zombie ID '{observation.SubjectId}'.", this);
+                Debug.LogError($"{name}: Invalid Prolog lever ID '{observation.SubjectId}'.", this);
                 return null;
+
             }
 
-            zombies.Add(new NpcZombieState
+            if(observation.Type == FactType.LeverSeen)
             {
-                id = observation.SubjectId,
-                distance = observation.Distance.Value
-            });
+                if(observation.IsOn ?? false)
+                {
+                    pulledCount++;
+                }
+x
+                levers.Add(new NpcLeverState
+                {
+                    id = observation.SubjectId,
+                    state = (observation.IsOn ?? false) ? "pulled" : "unpulled",
+                    visible = true,
+                    distance = observation.Distance ?? 0,
+                    nearest_zombie_distance = observation.NearestZombieDistance ?? 0
+                });
+            }
+            else if(observation.Type == FactType.ZombieSeen)
+            {
+                zombies.Add(new NpcZombieState
+                {
+                    id = observation.SubjectId,
+                    distance = observation.Distance ?? 0
+                });
+            }
+            else
+            {
+                Debug.LogError($"Got invalid fact type. It was: {observation.Type}");
+            }
         }
 
         // Assemble the snapshot expected by Python's FactFactory.

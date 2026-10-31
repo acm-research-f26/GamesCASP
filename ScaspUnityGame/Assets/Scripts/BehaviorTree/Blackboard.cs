@@ -90,7 +90,7 @@ public class Blackboard
         foreach (Fact fact in transientFacts)
         {
             if (fact == null) continue;
-            if (fact.Type == FactType.LeverSeen)
+            if (fact.Type == FactType.LeverSeen && !(fact.IsOn ?? true))
             {
                 visibleLevers.Add(fact);
                 canSeeLever = true;

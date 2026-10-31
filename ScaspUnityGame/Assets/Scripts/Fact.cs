@@ -29,9 +29,11 @@ public sealed class Fact
     public string TargetId { get; }
     public float? Distance { get; }
     public float? NearestZombieDistance { get; }
+    
+    public bool? IsOn { get; }
 
     public Fact(FactType type, FactLifetime lifetime, string subjectId, string targetId = null,
-        float? distance = null, float? nearestZombieDistance = null)
+        float? distance = null, float? nearestZombieDistance = null, bool? isOn = null)
     {
         if (!Enum.IsDefined(typeof(FactType), type))
             throw new ArgumentOutOfRangeException(nameof(type));
@@ -53,6 +55,7 @@ public sealed class Fact
         SubjectId = subjectId;
         TargetId = targetId;
         Distance = distance;
+        IsOn = isOn;
     }
 
     // Explicit selection avoids scene-wide scans and preserves who observed each fact.
