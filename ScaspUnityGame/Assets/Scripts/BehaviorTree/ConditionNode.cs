@@ -1,23 +1,24 @@
-using UnityEngine;
+using System;
 
 public abstract class ConditionNode : Node
-{    
-    // evaluate left node if evaluate() method returns false
-    Node leftNode;
+{
+    // False follows the left child; true follows the right child.
+    private readonly Node leftNode;
+    private readonly Node rightNode;
 
-    // evaluate right node if evaluate() method returns true
-    Node rightNode;
-
-    // condition nodes will override this method with their conditions
-    public abstract bool evaluate();
-
-    public override bool Tick()
+    protected ConditionNode(Node leftNode, Node rightNode)
     {
-        if (evaluate())
-        {
-            return rightNode.Tick();
-        }
+        this.leftNode = leftNode ?? throw new ArgumentNullException(nameof(leftNode));
+        this.rightNode = rightNode ?? throw new ArgumentNullException(nameof(rightNode));
+    }
 
-        return leftNode.Tick();
+    public abstract bool evaluate(Blackboard state);
+
+    public override bool Tick(Blackboard state,
+        out (string action, string target) decision)
+    {
+        if (state == null) throw new ArgumentNullException(nameof(state));
+        if (evaluate(state)) return rightNode.Tick(state, out decision);
+        return leftNode.Tick(state, out decision);
     }
 }
