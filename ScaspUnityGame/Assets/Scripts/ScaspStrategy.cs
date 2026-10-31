@@ -31,6 +31,8 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
     // Includes an in-flight fact until Python acknowledges persistence.
     public int PendingFactCount => storedFacts.Count;
 
+    public LeverManager levManager;
+
     private void Awake()
     {
         agent = GetComponent<Agent>();
@@ -38,6 +40,12 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
 
         if (client == null)
             client = GetComponent<ScaspClient>();
+
+        levManager = FindAnyObjectByType<LeverManager>();
+        if(levManager == null)
+        {
+            Debug.LogError("unable to find lever manager.");
+        }
     }
 
     // Assign a unique Prolog identity to each NPC.
@@ -210,25 +218,18 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
         List<NpcLeverState> levers = new List<NpcLeverState>();
         List<NpcZombieState> zombies = new List<NpcZombieState>();
 
-        int pulledCount = 0;
-
         // Collect lever state, visibility, and distances.
         foreach (Fact observation in transientFacts)
         {
             if(!IsValidAtom(observation.SubjectId))
             {
-                Debug.LogError($"{name}: Invalid Prolog lever ID '{observation.SubjectId}'.", this);
+                Debug.LogError($"{name}: Invalid Prolog ID '{observation.SubjectId}'.", this);
                 return null;
 
             }
 
             if(observation.Type == FactType.LeverSeen)
             {
-                if(observation.IsOn ?? false)
-                {
-                    pulledCount++;
-                }
-x
                 levers.Add(new NpcLeverState
                 {
                     id = observation.SubjectId,
@@ -257,7 +258,7 @@ x
         {
             health = agent.Health,
             levers_to_win = leversToWin,
-            levers_pulled_count = pulledCount,
+            levers_pulled_count = levManager.ActivatedLevers,
             levers = levers.ToArray(),
             zombies = zombies.ToArray(),
 
