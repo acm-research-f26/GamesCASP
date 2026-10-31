@@ -7239,7 +7239,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2073423678}
-  - component: {fileID: 2073423679}
   - component: {fileID: 2073423680}
   m_Layer: 0
   m_Name: PlayerManager
@@ -7263,18 +7262,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2073423679
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2073423677}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3b8e12a358995b543876ddbe6f1601e5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: '::'
 --- !u!114 &2073423680
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7290,6 +7277,8 @@ MonoBehaviour:
   spawnSpacing: 2
   spawnPosition: {x: 0, y: 0}
   decisionInterval: 1
+  decisionBackend: 0
+  leverManager: {fileID: 190084542}
   playerPrefab: {fileID: 8838343777709214332, guid: 33ba18699b53c1a4e91eac3dafd22ced, type: 3}
   players: []
 --- !u!1 &2109457412

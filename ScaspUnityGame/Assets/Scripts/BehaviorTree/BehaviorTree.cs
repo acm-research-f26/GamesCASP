@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // Plain C# strategy, one instance per agent. Do not attach it as a component.
-public sealed class BehaviorTree : MonoBehaviour, IAgentStrategy
+public sealed class BehaviorTree : IAgentStrategy
 {
     private readonly Agent owner;
     private readonly AiAction aiAction;

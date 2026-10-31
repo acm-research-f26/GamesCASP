@@ -68,7 +68,7 @@ public class PlayerManager : MonoBehaviour
                 {
                     // THIS is where the snippet from INTEGRATION.md belongs.
                     var tree = new BehaviorTree(agent.GetComponent<AiAction>(), leverManager);
-                    agent.SetStrategy(tree);
+                    agent.SetStrategy(tree, "behavior_tree");
                 }
                 else
                 {
@@ -78,7 +78,7 @@ public class PlayerManager : MonoBehaviour
                     strategy.SetActorId(actorId);
                     strategy.enabled = true;
                     client.enabled = true;
-                    agent.SetStrategy(strategy);
+                    agent.SetStrategy(strategy, "scasp");
                     // Refresh each NPC's observations and decision on a regular game-time interval.
                     if (strategy != null && client != null) StartCoroutine(RunNpcDecisionLoop(agent, client));
                     else Debug.LogWarning($"{actorId}: Missing ScaspStrategy or ScaspClient.", npc);

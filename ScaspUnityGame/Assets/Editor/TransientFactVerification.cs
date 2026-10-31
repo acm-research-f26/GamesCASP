@@ -33,7 +33,7 @@ public static class TransientFactVerification
             var a = new ProbeStrategy();
             var b = new ProbeStrategy();
             var c = new ProbeStrategy();
-            first.SetStrategy(a); second.SetStrategy(b); excluded.SetStrategy(c);
+            first.SetStrategy(a, "probe"); second.SetStrategy(b, "probe"); excluded.SetStrategy(c, "probe");
             a.Facts.Add(new Fact(FactType.ZombieSeen, FactLifetime.Transient, "zombie1", distance: 2));
             var result = Fact.FetchAllTransientFacts(new[] { first, first, null, second });
             check(result.Count == 2 && a.Queries == 1 && b.Queries == 1 && c.Queries == 0,
@@ -52,7 +52,7 @@ public static class TransientFactVerification
             check(true, "Query lifetime and storage boundaries enforced");
 
             var sample = first.gameObject.AddComponent<SampleFactStrategy>();
-            first.SetStrategy(sample);
+            first.SetStrategy(sample, "sample");
             var zombie = Make(objects, "Zomb1", 2);
             var zombieComponent = zombie.AddComponent<Zombie>();
             string zombieId = zombieComponent.EntityId;
@@ -97,7 +97,7 @@ public static class TransientFactVerification
             // Edit Mode does not automatically call Awake.
             typeof(ScaspStrategy).GetMethod("Awake", System.Reflection.BindingFlags.Instance |
                 System.Reflection.BindingFlags.NonPublic).Invoke(scasp, null);
-            second.SetStrategy(scasp);
+            second.SetStrategy(scasp, "scasp");
             second.transform.position = first.transform.position;
             Physics2D.SyncTransforms();
             check(second.FetchTransientFacts().Count == 1, "s(CASP) uses the same observation format");
