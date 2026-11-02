@@ -55,8 +55,45 @@ The queue is in memory and does not survive stopping Play Mode. The current clie
 does not reconnect automatically after a connection failure.
 
 Storage lasts for this server session, as before: startup restores `facts_temp.pl`
-from `facts.pl`. These clauses preserve agent knowledge; this branch does not add
-rules that consume it or merge it into NPC decision snapshots.
+from `facts.pl`.
+
+## Using stored knowledge in NPC decisions
+
+Each `npc_decision` now combines fresh Unity state with the requesting actor's
+stored mutable and permanent clauses. Python reads the session file under the
+same lock used for writes, filters by the exact observer ID, and writes an immutable
+query snapshot. Other observers' knowledge and legacy global event facts are not
+included. The solver does not hold the storage lock while it runs.
+
+Unity keeps a decision queued until its pending stored facts are acknowledged,
+so a decision requested after an event includes that event's persisted knowledge.
+Failed writes retain the event and delay that agent's next decision until retry
+succeeds. An already-running decision retains its original snapshot.
+
+`stored_knowledge.pl`, included by the innocent behavior rules, exposes:
+
+- `remembered_fact(Type, Subject, Target, Distance, Actor)` for either lifetime.
+- `remembered_lever_activation(Lever, Actor)`.
+- `remembered_attack(Victim, Attacker, Actor)`.
+- `remembered_zombie(Zombie, Actor)`.
+
+Lever selection excludes a lever the actor remembers activating, even if a stale
+transient snapshot describes it as unpulled. Both mutable and permanent activation
+facts participate. The game's levers are one-way activations; a future resettable
+lever mechanic would need an explicit reset policy. Live health, objective counts,
+visibility, and distances remain authoritative. Remembered attacks and zombie
+sightings are queryable history, not evidence of current proximity: they neither
+cause indefinite fleeing nor apply damage a second time.
+
+The Python suite includes snapshot, observer isolation, mutable replacement,
+locking, and cleanup regressions. Three additional tests run real s(CASP) queries
+to check changed lever decisions, observer isolation, and historical threats versus
+current danger. They skip when `scasp` is not on PATH. Run all checks with the real
+solver in a disposable container, without resetting an existing server session:
+
+```powershell
+docker compose -f DockerServer/docker-compose.yml run --rm --no-deps gamescasp python3 -B -m unittest discover -s tests -v
+```
 
 ## Verification
 
@@ -104,7 +141,8 @@ completed the Python storage verifier (12 checks), existing fact-pipeline verifi
 (31 checks), and transient-query verifier (14 checks). The transient verifier also
 covers uppercase/clone display names, distinct IDs for real prefab instances, and
 resolving returned zombie action IDs to the observed GameObject.
-This validates storage and snapshot regressions, not new reasoning over stored facts.
+Those October 26 results validate the original storage and snapshot regressions.
+The newer decision-memory checks described above require a separate run.
 
 ## Watching a gameplay session
 
