@@ -35,6 +35,21 @@ collider deduplication, reinforcement updates, observer-scoped threats, snapshot
 serialization, and storage isolation. Python's automated checks cover conversion
 and validation of the barricade payload.
 
+For the complete runtime path, start the Python/s(CASP) server, enter Unity Play
+Mode, and choose **Tools > Facts > Verify Barricade Gameplay (Play Mode)**. You
+can run this before clicking Start Game. It creates temporary gameplay prefab
+instances away from the map, observes a barricade at distance 4 with reinforcement
+20 and a zombie 0.5 units from it, and sends the real snapshot through ScaspClient.
+It verifies the returned `move_to_barricade` target, actual NPC movement, fleeing
+when the zombie moves close, and fallback when the zombie leaves detection range.
+The test uses a unique observer, sends no stored facts, and removes its fixtures.
+The snapshot and report are saved under `ScaspUnityGame/Library/BarricadeVerification`.
+
+Validated November 2, 2026 in Unity 6000.6.0f1 against the running Docker server:
+**24 transient checks** and **8 gameplay checks** passed. The transient verifier
+uses the current AiAction physics query API and explicitly initializes runtime
+components when testing them in Edit Mode.
+
 ### Python regression suite
 
 With the server's `requirements.txt` dependencies installed:
