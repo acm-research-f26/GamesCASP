@@ -65,6 +65,11 @@ same lock used for writes, filters by the exact observer ID, and writes an immut
 query snapshot. Other observers' knowledge and legacy global event facts are not
 included. The solver does not hold the storage lock while it runs.
 
+Unity supplies both objective counts from the live `LeverManager`: `TotalLevers`
+and `ActivatedLevers`. There is no separate s(CASP) win-target setting. A two-lever
+map therefore sends a target of two, and after both are activated the solver stops
+hunting (while still reacting to current danger or urgent barricades).
+
 Unity keeps a decision queued until its pending stored facts are acknowledged,
 so a decision requested after an event includes that event's persisted knowledge.
 Failed writes retain the event and delay that agent's next decision until retry
@@ -86,7 +91,7 @@ sightings are queryable history, not evidence of current proximity: they neither
 cause indefinite fleeing nor apply damage a second time.
 
 The Python suite includes snapshot, observer isolation, mutable replacement,
-locking, and cleanup regressions. Three additional tests run real s(CASP) queries
+locking, and cleanup regressions. Five additional tests run real s(CASP) queries
 to check changed lever decisions, observer isolation, and historical threats versus
 current danger. They skip when `scasp` is not on PATH. Run all checks with the real
 solver in a disposable container, without resetting an existing server session:
@@ -94,6 +99,28 @@ solver in a disposable container, without resetting an existing server session:
 ```powershell
 docker compose -f DockerServer/docker-compose.yml run --rm --no-deps gamescasp python3 -B -m unittest discover -s tests -v
 ```
+
+Validated November 2, 2026: all 21 Python tests passed inside `gamescasp`, with
+no skips. The WebSocket integration test stores both lifetimes through the real
+request handler, checks the persisted clauses, and proves that the next action
+changes from `pull_lever` to `hunt_lever` only for the informed observer. Its
+temporary session leaves the live gameplay facts untouched.
+
+### If the runtime fact file is empty
+
+`facts.pl` is the startup seed, not the runtime store. Every Python server startup
+copies it over `facts_temp.pl`, clearing the previous session's stored knowledge.
+NPC query files are temporary and are removed when the solver finishes.
+
+The saved Main scene selects the BehaviorTree backend. To exercise Python storage
+in gameplay, select **Scasp** in PlayerManager's **Decision Backend** before
+starting the game. The behavior tree consumes events locally and disables the
+NPC WebSocket clients; it does not write Python facts.
+
+For permanent facts, activate a lever within an NPC receiver's observation range.
+For mutable facts, select a spawned s(CASP) NPC and use **Tools > Facts > Send
+Mutable Test Fact (Play Mode)**. Zombie combat currently updates health but does
+not emit `AgentAttacked` facts, so combat alone will not populate mutable storage.
 
 ## Verification
 
