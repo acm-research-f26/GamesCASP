@@ -6,18 +6,11 @@ using UnityEngine;
 
 public static class TransientFactVerification
 {
-    private sealed class ProbeStrategy : IAgentStrategy
-    {
-        public int Queries;
-        public readonly List<Fact> Facts = new List<Fact>();
-        public IReadOnlyList<Fact> FetchTransientFacts() { Queries++; return Facts; }
-        public void StoreFact(Fact fact) => throw new Exception("Query attempted storage");
-        public void DecideNextAction(Agent_Parent_Script agent) { }
-    }
-
     [MenuItem("Tools/Facts/Verify Transient Queries")]
     public static void Run()
     {
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+            throw new InvalidOperationException("Stop Play Mode before running transient verification.");
         var objects = new List<GameObject>();
         int checks = 0;
         Action<bool, string> check = (ok, message) =>
@@ -28,32 +21,17 @@ public static class TransientFactVerification
         };
         try
         {
-            var first = Make(objects, "first", 0).AddComponent<Agent_Parent_Script>();
-            var second = Make(objects, "second", 20).AddComponent<Agent_Parent_Script>();
-            var excluded = Make(objects, "excluded", 40).AddComponent<Agent_Parent_Script>();
-            var a = new ProbeStrategy();
-            var b = new ProbeStrategy();
-            var c = new ProbeStrategy();
-            first.SetStrategy(a, "probe"); second.SetStrategy(b, "probe"); excluded.SetStrategy(c, "probe");
-            a.Facts.Add(new Fact(FactType.ZombieSeen, FactLifetime.Transient, "zombie1", distance: 2));
-            var result = Fact.FetchAllTransientFacts(new[] { first, first, null, second });
-            check(result.Count == 2 && a.Queries == 1 && b.Queries == 1 && c.Queries == 0,
-                "Only requested agents queried; duplicates and nulls skipped");
-            check(result[first].Count == 1 && result[second].Count == 0,
-                "Results retain observer identity, including empty observations");
-            a.Facts.Clear();
-            check(result[first].Count == 1 && first.FetchTransientFacts().Count == 0,
-                "Snapshots remain stable while new queries reflect changes");
-            check(Fact.FetchAllTransientFacts(Array.Empty<Agent_Parent_Script>()).Count == 0,
-                "Empty selection queries nobody");
-            a.Facts.Add(new Fact(FactType.LeverActivated, FactLifetime.Permanent, "lever1"));
-            Expect<InvalidOperationException>(() => first.FetchTransientFacts());
-            Expect<ArgumentException>(() => first.TryStoreFact(result[first][0]));
-            Expect<ArgumentNullException>(() => Fact.FetchAllTransientFacts(null));
-            check(true, "Query lifetime and storage boundaries enforced");
-
-            var sample = first.gameObject.AddComponent<SampleFactStrategy>();
-            first.SetStrategy(sample, "sample");
+            var first = Make(objects, "first", 0).AddComponent<Agent>();
+            var second = Make(objects, "second", 20).AddComponent<Agent>();
+            var excluded = Make(objects, "excluded", 40).AddComponent<Agent>();
+            // Edit Mode does not run the runtime component lifecycle.
+            foreach (var actor in new[] { first, second, excluded })
+            {
+                typeof(Agent_Parent_Script).GetMethod("Awake", System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.NonPublic).Invoke(actor, null);
+                actor.SetStrategy(actor.gameObject.AddComponent<SampleFactStrategy>(), "sample");
+            }
+            var sample = first.GetComponent<SampleFactStrategy>();
             var zombie = Make(objects, "Zomb1", 2);
             var zombieComponent = zombie.AddComponent<Zombie>();
             string zombieId = zombieComponent.EntityId;
@@ -62,6 +40,20 @@ public static class TransientFactVerification
             child.transform.SetParent(zombie.transform, true);
             child.AddComponent<CircleCollider2D>();
             Physics2D.SyncTransforms();
+            var result = Fact.FetchAllTransientFacts(new[] { first, first, null, second });
+            var counter = typeof(AiAction).GetField("transientQueryCount",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            check(result.Count == 2 && (int)counter.GetValue(first.GetComponent<AiAction>()) == 1 &&
+                  (int)counter.GetValue(second.GetComponent<AiAction>()) == 1 &&
+                  (int)counter.GetValue(excluded.GetComponent<AiAction>()) == 0,
+                "Only requested agents queried; duplicates and nulls skipped");
+            check(result[first].Count == 1 && result[second].Count == 0,
+                "Results retain observer identity, including empty observations");
+            check(Fact.FetchAllTransientFacts(Array.Empty<Agent_Parent_Script>()).Count == 0,
+                "Empty selection queries nobody");
+            Expect<ArgumentException>(() => first.TryStoreFact(result[first][0]));
+            Expect<ArgumentNullException>(() => Fact.FetchAllTransientFacts(null));
+            check(true, "Transient facts cannot enter stored memory");
             var observed = first.FetchTransientFacts();
             check(observed.Count == 1 && observed[0].SubjectId == zombieId &&
                   observed[0].Distance == 2 && observed[0].Lifetime == FactLifetime.Transient,
@@ -99,6 +91,7 @@ public static class TransientFactVerification
             // Edit Mode does not automatically call Awake.
             typeof(ScaspStrategy).GetMethod("Awake", System.Reflection.BindingFlags.Instance |
                 System.Reflection.BindingFlags.NonPublic).Invoke(scasp, null);
+            scasp.levManager = manager;
             second.SetStrategy(scasp, "scasp");
             second.transform.position = first.transform.position;
             Physics2D.SyncTransforms();
@@ -164,6 +157,13 @@ public static class TransientFactVerification
                 "Out-of-range barricades expire on the next query");
             check(sample.StoredFacts.Count == 0 && scasp.PendingFactCount == 0,
                 "Barricade observations never enter persistent storage");
+            manager.totalLevers = 2;
+            manager.LeverActivated();
+            manager.LeverActivated();
+            state = (NpcState)typeof(ScaspStrategy).GetMethod("BuildNpcState",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(scasp, null);
+            check(state.levers_to_win == 2 && state.levers_pulled_count == 2,
+                "s(CASP) objective totals match the live manager after all map levers are activated");
             Debug.Log($"TRANSIENT FACTS VERIFIED: {checks} checks passed.");
         }
         finally
