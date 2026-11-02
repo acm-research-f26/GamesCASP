@@ -110,6 +110,8 @@ public class AiAction : MonoBehaviour
         // An entity can have multiple colliders, but should produce one observation.
         var seenZombies = new HashSet<Zombie>();
         var seenLevers = new HashSet<LeverScript>();
+        var seenBarricades = new HashSet<Window>();
+        var visibleBarricades = new List<Window>();
         Zombie[] allZombies = FindObjectsByType<Zombie>(FindObjectsSortMode.None);
 
         foreach (var detected in detectedObjects)
@@ -118,6 +120,10 @@ public class AiAction : MonoBehaviour
             {
                 continue;
             }
+
+            Window barricade = detected.obj.GetComponentInParent<Window>();
+            if (barricade != null && barricade.isActiveAndEnabled && seenBarricades.Add(barricade))
+                visibleBarricades.Add(barricade);
 
             // Zombie observation.
             Zombie zombie = detected.obj.GetComponentInParent<Zombie>();
@@ -129,7 +135,7 @@ public class AiAction : MonoBehaviour
                 facts.Add(new Fact(
                     FactType.ZombieSeen,
                     FactLifetime.Transient,
-                    zombie.gameObject.name,
+                    zombie.EntityId,
                     distance: Vector2.Distance(
                         transform.position,
                         zombie.transform.position)
@@ -169,6 +175,24 @@ public class AiAction : MonoBehaviour
                     isOn: lever.isOn
                 ));
             }
+        }
+
+        // Use only zombies observed by this agent; do not reveal unseen threats.
+        foreach (Window barricade in visibleBarricades)
+        {
+            var zombieDistances = new Dictionary<string, float>();
+            float nearestZombieDistance = float.PositiveInfinity;
+            foreach (Zombie zombie in seenZombies)
+            {
+                float distance = Vector2.Distance(barricade.transform.position, zombie.transform.position);
+                zombieDistances.Add(zombie.EntityId, distance);
+                nearestZombieDistance = Mathf.Min(nearestZombieDistance, distance);
+            }
+            facts.Add(new Fact(FactType.BarricadeSeen, FactLifetime.Transient,
+                barricade.gameObject.name,
+                distance: Vector2.Distance(transform.position, barricade.transform.position),
+                nearestZombieDistance: nearestZombieDistance,
+                reinforcement: barricade.health, zombieDistances: zombieDistances));
         }
 
         lastTransientFactCount = facts.Count;

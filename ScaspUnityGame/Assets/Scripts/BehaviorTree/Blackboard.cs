@@ -90,6 +90,8 @@ public class Blackboard
         foreach (Fact fact in transientFacts)
         {
             if (fact == null) continue;
+            if (fact.Type == FactType.BarricadeSeen)
+                canSeeBarricade = true;
             if (fact.Type == FactType.LeverSeen && !(fact.IsOn ?? true))
             {
                 visibleLevers.Add(fact);

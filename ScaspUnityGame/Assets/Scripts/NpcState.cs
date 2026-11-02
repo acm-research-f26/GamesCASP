@@ -38,4 +38,5 @@ public class NpcBarricadeState
     public bool visible;
     public float reinforcement;
     public float distance;
+    public NpcZombieState[] zombie_distances = Array.Empty<NpcZombieState>();
 }

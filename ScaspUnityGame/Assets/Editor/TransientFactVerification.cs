@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -93,6 +94,7 @@ public static class TransientFactVerification
             check(first.FetchTransientFacts().Count == 0, "Disabled zombies excluded");
             zombie.GetComponent<Zombie>().enabled = true;
 
+            var manager = Make(objects, "leverManager", 50).AddComponent<LeverManager>();
             var scasp = second.gameObject.AddComponent<ScaspStrategy>();
             // Edit Mode does not automatically call Awake.
             typeof(ScaspStrategy).GetMethod("Awake", System.Reflection.BindingFlags.Instance |
@@ -105,6 +107,63 @@ public static class TransientFactVerification
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(scasp, null);
             check(state != null && state.zombies.Length == 1 && state.zombies[0].id == zombieId &&
                   state.zombies[0].distance == 2, "s(CASP) decision snapshot consumes queried observations");
+
+            var barricade = Make(objects, "window", 3);
+            var window = barricade.AddComponent<Window>();
+            typeof(Window).GetMethod("Awake", System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.NonPublic).Invoke(window, null);
+            window.health = 24;
+            barricade.AddComponent<BoxCollider2D>();
+            var barricadeChild = Make(objects, "windowCollider", 3);
+            barricadeChild.transform.SetParent(barricade.transform, true);
+            barricadeChild.AddComponent<BoxCollider2D>();
+            Physics2D.SyncTransforms();
+            var barricadeFacts = first.FetchTransientFacts().Where(f => f.Type == FactType.BarricadeSeen).ToArray();
+            check(barricadeFacts.Length == 1 && barricadeFacts[0].Distance == 3 &&
+                  barricadeFacts[0].Reinforcement == 24 && barricadeFacts[0].Lifetime == FactLifetime.Transient,
+                "Barricade observation includes range and reinforcement and deduplicates child colliders");
+            check(barricadeFacts[0].ZombieDistances.Count == 1 &&
+                  barricadeFacts[0].ZombieDistances[zombieId] == 1,
+                "Barricade threat distance uses the observed zombie's stable identity");
+            state = (NpcState)typeof(ScaspStrategy).GetMethod("BuildNpcState",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(scasp, null);
+            check(state.barricades.Length == 1 && state.barricades[0].visible &&
+                  state.barricades[0].id == barricade.name && state.barricades[0].reinforcement == 24 &&
+                  state.barricades[0].zombie_distances.Length == 1 &&
+                  state.barricades[0].zombie_distances[0].id == zombieId &&
+                  state.barricades[0].zombie_distances[0].distance == 1,
+                "s(CASP) snapshot includes barricades and zombie-to-barricade distances");
+            var roundTrip = JsonUtility.FromJson<NpcState>(JsonUtility.ToJson(state));
+            check(roundTrip.barricades[0].zombie_distances[0].distance == 1,
+                "Barricade threat array survives Unity JSON serialization");
+            if (Application.isBatchMode)
+            {
+                System.IO.Directory.CreateDirectory("Temp");
+                System.IO.File.WriteAllText("Temp/barricade-snapshot.json", JsonUtility.ToJson(state));
+            }
+            var blackboard = new Blackboard(second.GetComponent<Agent>(), manager);
+            blackboard.updateTransientFacts(second.FetchTransientFacts());
+            check(blackboard.canSeeBarricade, "Blackboard recognizes shared barricade observations");
+            blackboard.clearTransientState();
+            check(!blackboard.canSeeBarricade, "Blackboard clears transient barricade visibility");
+            window.health = 75;
+            zombie.transform.position += Vector3.right * 100;
+            Physics2D.SyncTransforms();
+            var updated = first.FetchTransientFacts().Single(f => f.Type == FactType.BarricadeSeen);
+            check(updated.Reinforcement == 75 && updated.ZombieDistances.Count == 0 &&
+                  float.IsPositiveInfinity(updated.NearestZombieDistance.Value) &&
+                  barricadeFacts[0].Reinforcement == 24 && barricadeFacts[0].ZombieDistances.Count == 1,
+                "Fresh barricade snapshots update health, exclude unseen zombies, and preserve old observations");
+            window.enabled = false;
+            check(!first.FetchTransientFacts().Any(f => f.Type == FactType.BarricadeSeen),
+                "Disabled barricades excluded");
+            window.enabled = true;
+            barricade.transform.position += Vector3.right * 100;
+            Physics2D.SyncTransforms();
+            check(!first.FetchTransientFacts().Any(f => f.Type == FactType.BarricadeSeen),
+                "Out-of-range barricades expire on the next query");
+            check(sample.StoredFacts.Count == 0 && scasp.PendingFactCount == 0,
+                "Barricade observations never enter persistent storage");
             Debug.Log($"TRANSIENT FACTS VERIFIED: {checks} checks passed.");
         }
         finally

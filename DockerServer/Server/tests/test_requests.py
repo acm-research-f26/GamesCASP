@@ -18,6 +18,34 @@ from UnityRequestFactory import UnityRequestFactory
 
 
 class RequestTests(unittest.TestCase):
+    def test_barricade_snapshot_from_unity(self):
+        state = {
+            "health": 3, "levers_to_win": 3, "levers_pulled_count": 0,
+            "zombies": [{"id": "zombie_1", "distance": 3}],
+            "barricades": [{"id": "barricade_1", "visible": True,
+                            "reinforcement": 24, "distance": 4,
+                            "zombie_distances": [{"id": "zombie_1", "distance": 1}]}],
+        }
+        facts = FactFactory.generate_npc_facts("player1", state)
+        for clause in ("barricade_visible(barricade_1, player1).",
+                       "barricade_reinforcement(barricade_1, 24).",
+                       "distance(barricade_1, 4, player1).",
+                       "zombie_distance_to_barricade(barricade_1, 1, zombie_1)."):
+            self.assertIn(clause, facts)
+        barricade = state["barricades"][0]
+        barricade["zombie_distances"] = {"zombie_1": 1}
+        self.assertEqual(FactFactory.generate_npc_facts("player1", state), facts)
+        barricade["zombie_distances"] = []
+        self.assertNotIn("zombie_distance_to_barricade(", FactFactory.generate_npc_facts("player1", state))
+        barricade["visible"] = False
+        self.assertNotIn("barricade_visible(", FactFactory.generate_npc_facts("player1", state))
+        for distances in ([{"id": "z). injected.", "distance": 1}],
+                          [{"id": "zombie_1", "distance": float("inf")}],
+                          [{"id": "zombie_1", "distance": -1}], [None], "invalid"):
+            barricade["zombie_distances"] = distances
+            with self.subTest(distances=distances), self.assertRaises(ValueError):
+                FactFactory.generate_npc_facts("player1", state)
+
     def test_dispatch_and_unknown_types(self):
         ctx = UnityRequestContext()
         self.assertIsInstance(UnityRequestFactory.make_request("fact", ctx), UnityTempFactRequest)

@@ -217,8 +217,9 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
 
         List<NpcLeverState> levers = new List<NpcLeverState>();
         List<NpcZombieState> zombies = new List<NpcZombieState>();
+        List<NpcBarricadeState> barricades = new List<NpcBarricadeState>();
 
-        // Collect lever state, visibility, and distances.
+        // Collect current world observations for this agent.
         foreach (Fact observation in transientFacts)
         {
             if(!IsValidAtom(observation.SubjectId))
@@ -247,6 +248,20 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
                     distance = observation.Distance ?? 0
                 });
             }
+            else if (observation.Type == FactType.BarricadeSeen)
+            {
+                var distances = new List<NpcZombieState>();
+                foreach (var pair in observation.ZombieDistances)
+                    distances.Add(new NpcZombieState { id = pair.Key, distance = pair.Value });
+                barricades.Add(new NpcBarricadeState
+                {
+                    id = observation.SubjectId,
+                    visible = true,
+                    distance = observation.Distance.Value,
+                    reinforcement = observation.Reinforcement.Value,
+                    zombie_distances = distances.ToArray()
+                });
+            }
             else
             {
                 Debug.LogError($"Got invalid fact type. It was: {observation.Type}");
@@ -262,8 +277,7 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
             levers = levers.ToArray(),
             zombies = zombies.ToArray(),
 
-            // Barricade state will be connected separately.
-            barricades = Array.Empty<NpcBarricadeState>()
+            barricades = barricades.ToArray()
         };
     }
 }
