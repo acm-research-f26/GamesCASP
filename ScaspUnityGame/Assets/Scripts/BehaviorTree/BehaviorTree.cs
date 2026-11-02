@@ -28,9 +28,20 @@ public sealed class BehaviorTree : MonoBehaviour, IAgentStrategy
         LastDecision = ("", "");
     }
 
+    // Trees selected in the Inspector are not initialized by PlayerManager.
+    private void EnsureInitialized()
+    {
+        if (state == null)
+            SetInitialValues(GetComponent<AiAction>(), FindAnyObjectByType<LeverManager>());
+    }
+
     // Main's interfaces retain their existing names. Your public API is available too.
     public void StoreFact(Fact fact) => storeFact(fact);
-    public void storeFact(Fact fact) => state.update(fact);
+    public void storeFact(Fact fact)
+    {
+        EnsureInitialized();
+        state.update(fact);
+    }
 
     public IReadOnlyList<Fact> FetchTransientFacts() => aiAction.FetchTransientFacts();
 
@@ -58,6 +69,7 @@ public sealed class BehaviorTree : MonoBehaviour, IAgentStrategy
     public void DecideNextAction(Agent_Parent_Script agent)
     {
         if (agent == null) throw new ArgumentNullException(nameof(agent));
+        EnsureInitialized();
         if (agent != owner) throw new ArgumentException("This tree belongs to another agent.", nameof(agent));
 
         var decision = getNextAction();

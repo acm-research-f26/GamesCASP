@@ -3,8 +3,8 @@
 `half_zombie_behavior.pl` extends `innocent_behavior.pl` and includes
 `half_zombie_rules.pl`. Load the behavior entrypoint once, alongside a fact
 snapshot, and query `action(Action, Actor)` as the existing Python NPC path does.
-The live Python handler still loads `innocent_behavior.pl`: this draft is exercised
-separately until the new facts and actions are ready for integration.
+The live Python handler now loads `half_zombie_timed_behavior.pl` for every NPC;
+see [Live integration](#live-integration) for the Unity and stored-memory contract.
 
 ## Original draft: starting model
 
@@ -53,10 +53,9 @@ an observer argument in a follow-up.
    including waiting. When no eligible human is visible, infected innocents
    resume their existing human objectives.
 
-The new action names fit the existing parser's `action(target)` form. Unity does
-not execute them yet. `FactFactory` also still supplies only innocent snapshots,
-and persistent `stored_fact/6` clauses are not automatically translated into
-these bite/visibility facts. Integration is separate work.
+The new action names fit the existing parser's `action(target)` form. Unity now
+executes them, `FactFactory` supplies half-zombie snapshots, and stored witness
+memories are translated into this evidence; see [Live integration](#live-integration).
 
 ## Try it
 
@@ -146,6 +145,100 @@ actions, including exact/fractional thresholds, expiry, renewal snapshots, missi
 timers, no visible target, elimination, and innocent behavior around visible humans
 before the critical stage and after renewal. The first draft's 23 checks remain
 available through `verify_half_zombie.py`.
+
+## Live integration
+
+### One 30-second window everywhere
+
+The design brief mentions about 60 seconds; the tested rules use 30, so 30 was kept.
+`bite_window_seconds(30)` and `critical_bite_seconds(15)` in
+`half_zombie_timed_behavior.pl` are the source of truth. Unity mirrors the window as
+`Agent.BiteWindowSeconds` and sends it in every snapshot; Python rejects a half-zombie
+snapshot whose window disagrees (`invalid_request`, shown in Unity's console) rather
+than reasoning with a conflicting timer. To change the window, edit both; the unit
+tests compare them. Both timestamps use Unity's `Time.time`, which pauses with
+`Time.timeScale`.
+
+### Snapshot contract
+
+| Unity `NpcState` | Prolog | Notes |
+| --- | --- | --- |
+| `half_zombie` | `half_zombie(Actor).` | The deciding actor's own status only |
+| `current_time` | `current_time(Now).` | Sent only for half zombies |
+| `bite_window_started_at` | `bite_window_started_at(Start, Actor).` | Infection or latest confirmed bite |
+| `bite_window_seconds` | (validated, not emitted) | Must equal `bite_window_seconds/1` |
+| `humans[]`: `id`, `health`, `visible`, `distance` | `innocent(H).` `health(Hp, H).` `distance(H, D, Actor).` `human_visible(H, Actor).` | Other living agents in detection range |
+
+`NpcHumanState` has no infection field, so another agent's half-zombie status cannot
+reach a snapshot. Every human therefore looks like an eligible target to a biter, and
+others learn of an infection only through witnessed events. Human IDs are
+`Agent.AgentId` (`player1`, `player2`, ...), the same IDs used as each NPC's actor.
+
+### Actions
+
+| s(CASP) answer | Unity | Behavior |
+| --- | --- | --- |
+| `move_to_human(T)` | `AiAction.MoveToHuman` | Approach `T` to `interactionRange` |
+| `attack_human(T)` | `AiAction.AttackHuman` | Pursue `T`; once in range, raise `AiAction.BiteRequested(T)` at most once per `biteAttemptCooldown` (1 s game time) |
+| `run_from(T)` | `AiAction.RunFrom` | Also resolves a suspected human, not only zombies |
+| no models | (none) | Python sends an empty action; Unity keeps current movement, like the tree's `NoEligibleAction` |
+
+`attack_human` refuses agents that are not active half zombies, self-targets, and dead
+or disabled victims. `BiteRequested` means an attempt was made in range, never that
+it succeeded.
+
+### Witnessed events and stored memories
+
+Python adds the deciding actor's own `stored_fact/6` clauses (and no one else's) to
+each decision snapshot. `half_zombie_rules.pl` turns them into evidence:
+
+| Unity `FactType` (Permanent) | Stored type, Subject → Target | Prolog evidence | Suspects |
+| --- | --- | --- | --- |
+| `ZombieAttackWitnessed` | `zombie_attack_witnessed`, zombie → victim | `witnessed_zombie_attack/3` | Victim |
+| `BiteAttemptWitnessed` | `bite_attempt_witnessed`, biter → victim | `witnessed_bite_attempt/3` | Biter only |
+| `BiteWitnessed` | `bite_witnessed`, biter → victim | `witnessed_bite/3` (existing) | Biter and victim |
+
+Python accepts these types only as permanent facts with a victim. The victim of a
+zombie hit also receives the existing mutable `AgentAttacked` fact (latest attacker).
+`AttackWitnessReporter` delivers memories through each observer's `AgentFactReceiver`:
+living agents within their own `detectionRange` of both attacker and victim, plus the
+victim; never the biter. Perception is range-only, like transient observations and
+`LeverFactEmitter`. Each memory reaches each observer once, however often it is reported.
+
+### Handoff to the gameplay mechanic
+
+The AI never applies infection, decides bite success, or transforms agents. The
+mechanic connects through these calls:
+
+1. **Infection from a zombie hit:** call `victim.MarkHalfZombie()` on a landed hit,
+   next to `AttackWitnessReporter.ReportZombieAttack` in `Zombie.Update`. It returns
+   false and changes nothing for agents already infected or dead, so repeated hits
+   do not restart the window.
+2. **Bites:** subscribe to each NPC's `AiAction.BiteRequested`. Witnesses have already
+   recorded an attempt. Decide the outcome. On success, call `victim.MarkHalfZombie()`,
+   `biter.RenewBiteWindow()` (false once expired: too late), and
+   `AttackWitnessReporter.ReportConfirmedBite(biter, victim)`. On failure do nothing;
+   the AI may try again after the cooldown.
+3. **Transformation:** `Agent.BiteWindowExpired` becomes true at start + 30 s. From
+   then on `Agent.ExecuteAction` stops AI movement instead of executing, and
+   `PlayerManager` stops requesting decisions. The mechanic replaces the agent with a
+   zombie-controlled bot.
+
+Until the mechanic subscribes, `attack_human` logs one warning per target and nothing
+is witnessed, because no bite was attempted.
+
+### Verification
+
+```powershell
+python -B -m unittest discover -s DockerServer/Server/tests -v
+docker run --rm -v "${PWD}/DockerServer/Server:/app:ro" -w /app dockerserver-gamescasp python3 -B -m unittest discover -s tests -v
+```
+
+The first command substitutes the solver; the second runs the same suite with the real
+solver, including `test_scasp_integration.py`, which stores memories through the
+production handler and checks the decisions that follow. In Unity, use **Tools > Facts >
+Verify Half-Zombie Integration**, or batch mode with
+`-executeMethod HalfZombieVerification.RunBatch` (also runs the fact-pipeline verifier).
 
 ## References
 

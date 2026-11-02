@@ -34,6 +34,9 @@ public class ScaspClient : MonoBehaviour
     // Parameters are actor, action, target
     public event Action<string, string, string> NpcActionReceived;
 
+    // Python could not produce a decision for this actor (validation or solver error).
+    public event Action<string> NpcDecisionFailed;
+
     [Serializable]
     private class Request
     {
@@ -55,6 +58,7 @@ public class ScaspClient : MonoBehaviour
         public string error;
         public string detail;
         public string request_id;
+        public string request_type;
         // NPC-specific response fields
         public string actor;
         public string action;
@@ -228,7 +232,11 @@ public class ScaspClient : MonoBehaviour
                     pendingFactWrites.TryGetValue(response.request_id, out var failedWrite))
                     failedWrite.TrySetException(new InvalidOperationException(response.error + ": " + response.detail));
                 else
+                {
                     Debug.LogError("s(CASP) " + response.error + ": " + response.detail, this);
+                    if (response.request_type == "npc_decision" && !string.IsNullOrEmpty(response.actor))
+                        NpcDecisionFailed?.Invoke(response.actor);
+                }
             }
             else if (response.message_type == "facts_stored")
             {

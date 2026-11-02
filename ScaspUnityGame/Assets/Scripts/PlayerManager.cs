@@ -52,6 +52,8 @@ public class PlayerManager : MonoBehaviour
                 // Assign each NPC a unique Prolog actor ID.
                 string actorId = $"player{i + 1}";
                 npc.name = actorId;
+                // Other agents see this NPC under the same ID, whichever backend controls it.
+                agent.SetAgentId(actorId);
 
                 // Only one backend controls a clone, regardless of prefab Inspector assignment.
                 foreach (MonoBehaviour component in npc.GetComponents<MonoBehaviour>())
@@ -116,7 +118,8 @@ public class PlayerManager : MonoBehaviour
         bool usesScasp = client != null;
         while (agent != null)
         {
-            if (agent.isActiveAndEnabled && agent.Health > 0 &&
+            // A transformed half-zombie belongs to the gameplay mechanic, not the AI.
+            if (agent.isActiveAndEnabled && agent.Health > 0 && !agent.BiteWindowExpired &&
                 (!usesScasp || (client != null && client.IsConnected)))
                 agent.RequestDecision();
 

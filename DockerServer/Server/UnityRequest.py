@@ -5,7 +5,7 @@ import re
 import uuid
 
 from FactFactory import FactFactory
-from StoredFacts import StoredFact, require_atom, update_stored_facts
+from StoredFacts import StoredFact, require_atom, stored_facts_for_actor, update_stored_facts
 
 SOLVER_TIMEOUT_SECONDS = 30
 logger = logging.getLogger(__name__)
@@ -189,6 +189,15 @@ class UnityNPCDecisionRequest(UnityActionRequest):
         logger.info("NPC snapshot received for %s: zombies=%s", actor,
                     json.dumps(state.get("zombies", [])))
 
+        # Reason over this actor's own acknowledged memories as well as the
+        # current snapshot. Read under the lock that store_facts writes under.
+        async with self.ctx["facts_lock"]:
+            stored = self.ctx["facts_temp_file"].read_text(encoding="utf-8")
+        memories = stored_facts_for_actor(stored, actor)
+        facts += "".join(memories)
+        if memories:
+            logger.info("NPC memories included for %s: %d", actor, len(memories))
+
         snapshot_id = uuid.uuid4().hex
 
         snapshot_file = (
@@ -227,15 +236,19 @@ class UnityNPCDecisionRequest(UnityActionRequest):
             )
 
             if match is None:
-                raise RuntimeError(
-                    "s(CASP) returned no recognizable NPC action"
-                )
+                # No eligible action is a valid outcome (for example, a
+                # critical half zombie with no visible target), not a failure.
+                if re.search(r"^no models\s*$", output, re.MULTILINE) is None:
+                    raise RuntimeError(
+                        "s(CASP) returned no recognizable NPC action"
+                    )
+                logger.info("s(CASP) found no eligible action for %s", actor)
 
             response = json.dumps({
                 "message_type": "npc_action",
                 "actor": actor,
-                "action": match.group(1),
-                "target": match.group(2) or ""
+                "action": match.group(1) if match else "",
+                "target": (match.group(2) if match else None) or ""
             })
 
             async with self.ctx["send_lock"]:

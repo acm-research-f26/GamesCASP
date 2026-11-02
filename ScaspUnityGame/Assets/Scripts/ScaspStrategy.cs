@@ -16,6 +16,8 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
 
     [Header("Decision Settings")]
     [SerializeField] private float requestTimeout = 35f;
+    [Tooltip("Real-time seconds a queued decision waits for in-flight fact writes, so it reasons over them.")]
+    [SerializeField, Min(0f)] private float maxFactWaitBeforeDecision = 1f;
 
     private Agent agent;
     private AiAction aiAction;
@@ -23,6 +25,7 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
     private bool requestPending;
     private bool decisionQueued;
     private float requestStartTime;
+    private float decisionQueuedTime;
 
     private readonly List<Fact> storedFacts = new List<Fact>();
     private bool sendingStoredFacts;
@@ -30,6 +33,7 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
 
     // Includes an in-flight fact until Python acknowledges persistence.
     public int PendingFactCount => storedFacts.Count;
+    public string ActorId => actorId;
 
     public LeverManager levManager;
 
@@ -66,13 +70,22 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
             client = GetComponent<ScaspClient>();
 
         if (client != null)
+        {
             client.NpcActionReceived += HandleNpcAction;
+            client.NpcDecisionFailed += HandleNpcDecisionFailed;
+
+            // A strategy enabled by runtime switching needs its connection too.
+            client.enabled = true;
+        }
     }
 
     private void OnDisable()
     {
         if (client != null)
+        {
             client.NpcActionReceived -= HandleNpcAction;
+            client.NpcDecisionFailed -= HandleNpcDecisionFailed;
+        }
 
         requestPending = false;
         decisionQueued = false;
@@ -90,6 +103,11 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
         }
 
         if (!decisionQueued || requestPending || client == null || !client.IsConnected)
+            return;
+
+        // Let in-flight memories be acknowledged first so this decision reasons over them.
+        // A failing store must not stall decisions, so the wait is bounded.
+        if (sendingStoredFacts && Time.realtimeSinceStartup - decisionQueuedTime < maxFactWaitBeforeDecision)
             return;
 
         if (!IsValidAtom(actorId))
@@ -134,6 +152,12 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
             return;
         }
 
+        // A disabled strategy never runs Update, so it would never send this request.
+        if (Application.isPlaying && !isActiveAndEnabled)
+            Debug.LogWarning($"{name}: ScaspStrategy is selected but disabled; select it with SetStrategy.", this);
+
+        if (!decisionQueued)
+            decisionQueuedTime = Time.realtimeSinceStartup;
         decisionQueued = true;
     }
 
@@ -192,9 +216,11 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
 
         requestPending = false;
 
+        // Python sends an empty action when s(CASP) finds no model. Like the behavior
+        // tree's NoEligibleAction, this is not "wait": current movement continues.
         if (string.IsNullOrWhiteSpace(action))
         {
-            Debug.LogWarning($"{name}: Received an empty NPC action.", this);
+            Debug.Log($"{name}: s(CASP) found no eligible action.", this);
             return;
         }
 
@@ -202,6 +228,13 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
 
         // Agent forwards the action to AiAction.
         agent.ExecuteAction(action, target ?? "");
+    }
+
+    // A failed decision must not hold the strategy until requestTimeout.
+    private void HandleNpcDecisionFailed(string actor)
+    {
+        if (actor == actorId)
+            requestPending = false;
     }
 
     // Validate identifiers before sending them to Prolog.
@@ -213,10 +246,17 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
     // Convert Unity's current world state into the Python request format.
     private NpcState BuildNpcState()
     {
+        if (levManager == null)
+        {
+            Debug.LogError($"{name}: Cannot build an NPC state without a LeverManager.", this);
+            return null;
+        }
+
         var transientFacts = aiAction.FetchTransientFacts();
 
         List<NpcLeverState> levers = new List<NpcLeverState>();
         List<NpcZombieState> zombies = new List<NpcZombieState>();
+        List<NpcHumanState> humans = new List<NpcHumanState>();
 
         // Collect lever state, visibility, and distances.
         foreach (Fact observation in transientFacts)
@@ -247,6 +287,16 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
                     distance = observation.Distance ?? 0
                 });
             }
+            else if(observation.Type == FactType.HumanSeen)
+            {
+                humans.Add(new NpcHumanState
+                {
+                    id = observation.SubjectId,
+                    health = observation.Health ?? 0,
+                    visible = true,
+                    distance = observation.Distance ?? 0
+                });
+            }
             else
             {
                 Debug.LogError($"Got invalid fact type. It was: {observation.Type}");
@@ -263,7 +313,14 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
             zombies = zombies.ToArray(),
 
             // Barricade state will be connected separately.
-            barricades = Array.Empty<NpcBarricadeState>()
+            barricades = Array.Empty<NpcBarricadeState>(),
+
+            // Only this agent's own infection status; other humans' status stays hidden.
+            half_zombie = agent.IsHalfZombie,
+            current_time = Time.time,
+            bite_window_started_at = agent.IsHalfZombie ? agent.BiteWindowStartedAt : 0f,
+            bite_window_seconds = Agent.BiteWindowSeconds,
+            humans = humans.ToArray()
         };
     }
 }

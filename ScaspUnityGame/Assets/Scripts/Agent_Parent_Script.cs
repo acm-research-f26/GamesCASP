@@ -13,7 +13,8 @@ public class Agent_Parent_Script : MonoBehaviour
 
     private IAgentStrategy runtimeStrategy;
     private AiAction aiAction;
-    private IAgentStrategy Strategy => runtimeStrategy ?? (strategyComponent as IAgentStrategy) ?? GetComponent<IAgentStrategy>();
+    // The strategy that currently receives decisions and facts, or null when none/ambiguous.
+    public IAgentStrategy ActiveStrategy => ResolveStrategy(out _);
 
     [HideInInspector]
     public string stratName;
@@ -30,29 +31,65 @@ public class Agent_Parent_Script : MonoBehaviour
     {
         runtimeStrategy = strategy ?? throw new System.ArgumentNullException(nameof(strategy));
         stratName = strategyName;
+
+        // Only the selected strategy component stays enabled, so a deselected backend
+        // cannot keep acting on this agent (for example, a late s(CASP) response).
+        foreach (MonoBehaviour component in GetComponents<MonoBehaviour>())
+            if (component is IAgentStrategy && !ReferenceEquals(component, strategy))
+                component.enabled = false;
+        if (strategy is MonoBehaviour selected && selected.gameObject == gameObject)
+            selected.enabled = true;
+    }
+
+    // Deterministic order: SetStrategy, then the Inspector field, then the only enabled
+    // strategy component. Several enabled candidates without an explicit choice is an error.
+    private IAgentStrategy ResolveStrategy(out string problem)
+    {
+        problem = null;
+        if (runtimeStrategy != null && !(runtimeStrategy is Object destroyed && destroyed == null))
+            return runtimeStrategy;
+
+        if (strategyComponent != null)
+            return strategyComponent as IAgentStrategy;
+
+        IAgentStrategy found = null;
+        foreach (MonoBehaviour component in GetComponents<MonoBehaviour>())
+        {
+            if (!(component is IAgentStrategy candidate) || !component.enabled)
+                continue;
+            if (found != null)
+            {
+                problem = "Several enabled IAgentStrategy components; assign Strategy Component or call SetStrategy.";
+                return null;
+            }
+            found = candidate;
+        }
+        return found;
+    }
+
+    private IAgentStrategy RequireStrategy()
+    {
+        var strategy = ResolveStrategy(out string problem);
+        if (strategy == null)
+            Debug.LogWarning($"{name}: {problem ?? "Assign an AI component implementing IAgentStrategy."}", this);
+        return strategy;
     }
 
     // The caller controls decision timing. Asynchronous backends may execute later.
     public void RequestDecision()
     {
-        var strategy = Strategy;
+        var strategy = RequireStrategy();
         if (strategy == null)
-        {
-            Debug.LogWarning($"{name}: Assign an AI component implementing IAgentStrategy.", this);
             return;
-        }
 
         strategy.DecideNextAction(this);
     }
 
     public System.Collections.Generic.IReadOnlyList<Fact> FetchTransientFacts()
     {
-        var strategy = Strategy;
+        var strategy = RequireStrategy();
         if (strategy == null)
-        {
-            Debug.LogWarning($"{name}: Assign an AI component implementing IAgentStrategy.", this);
             return System.Array.Empty<Fact>();
-        }
 
         // Copy the backend result so an earlier query remains a stable snapshot.
         var facts = aiAction.FetchTransientFacts();
@@ -72,12 +109,9 @@ public class Agent_Parent_Script : MonoBehaviour
         if (fact.Lifetime == FactLifetime.Transient)
             throw new System.ArgumentException("Transient facts must be queried, not stored.", nameof(fact));
 
-        var strategy = Strategy;
+        var strategy = RequireStrategy();
         if (strategy == null)
-        {
-            Debug.LogWarning($"{name}: Assign an AI component implementing IAgentStrategy.", this);
             return false;
-        }
 
         strategy.StoreFact(fact);
         return true;
