@@ -5,7 +5,7 @@ import re
 import uuid
 
 from FactFactory import FactFactory
-from StoredFacts import StoredFact, require_atom, update_stored_facts
+from StoredFacts import StoredFact, require_atom, select_actor_stored_facts, update_stored_facts
 
 SOLVER_TIMEOUT_SECONDS = 30
 logger = logging.getLogger(__name__)
@@ -185,6 +185,12 @@ class UnityNPCDecisionRequest(UnityActionRequest):
             raise ValueError(
                 f"Invalid NPC state: {exc}"
             ) from exc
+
+        # Capture only this observer's persistent knowledge under the writer's
+        # lock. The solver owns an immutable copy and never reads the live file.
+        async with self.ctx["facts_lock"]:
+            stored = self.ctx["facts_temp_file"].read_text(encoding="utf-8")
+        facts += select_actor_stored_facts(stored, actor)
 
         logger.info("NPC snapshot received for %s: zombies=%s", actor,
                     json.dumps(state.get("zombies", [])))
