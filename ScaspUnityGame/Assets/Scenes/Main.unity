@@ -7277,7 +7277,7 @@ MonoBehaviour:
   spawnSpacing: 2
   spawnPosition: {x: 0, y: 0}
   decisionInterval: 1
-  decisionBackend: 0
+  decisionBackend: 1
   leverManager: {fileID: 190084542}
   playerPrefab: {fileID: 8838343777709214332, guid: 33ba18699b53c1a4e91eac3dafd22ced, type: 3}
   players: []
