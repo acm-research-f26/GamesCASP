@@ -89,7 +89,9 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
             requestPending = false;
         }
 
-        if (!decisionQueued || requestPending || client == null || !client.IsConnected)
+        // Decisions must include every stored update already accepted locally.
+        // Keep the decision queued until Python acknowledges those writes.
+        if (!decisionQueued || requestPending || storedFacts.Count > 0 || client == null || !client.IsConnected)
             return;
 
         if (!IsValidAtom(actorId))
