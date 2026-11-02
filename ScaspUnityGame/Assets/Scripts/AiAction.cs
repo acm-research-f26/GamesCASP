@@ -50,6 +50,29 @@ public class AiAction : MonoBehaviour
     public bool IsSearchingForLever => isSearchingForLever;
     public bool IsSearchingForBarricade => isSearchingForBarricade;
 
+    // The command currently being carried out, for strategies and diagnostics.
+    public string CurrentAction => currentAction;
+    public string CurrentTarget => currentTarget;
+
+    // Every command any strategy issued to this executor, in order.
+    public int ExecuteCount { get; private set; }
+    public event System.Action<string, string> ActionExecuted;
+
+    // Shared navigation: identical for both strategies.
+    private readonly NavMover mover = new NavMover(false);
+    private readonly Dictionary<string, float> unreachableUntil = new Dictionary<string, float>();
+    private readonly Dictionary<Vector2Int, int> visits = new Dictionary<Vector2Int, int>();
+
+    // Targets navigation recently proved unreachable (evidence expires after 10 s).
+    public string[] UnreachableTargets()
+    {
+        var targets = new List<string>();
+        foreach (var entry in unreachableUntil)
+            if (entry.Value > Time.time)
+                targets.Add(entry.Key);
+        return targets.ToArray();
+    }
+
     private void Awake()
     {
         targetPosition = transform.position;
@@ -60,6 +83,10 @@ public class AiAction : MonoBehaviour
 
     private void Update()
     {
+        Vector2Int region = MansionNavigation.Region(transform.position);
+        visits.TryGetValue(region, out int seen);
+        visits[region] = seen + 1;
+
         DetectObjects();
 
         if (isSearchingForLever)
@@ -143,8 +170,8 @@ public class AiAction : MonoBehaviour
                 lever.isActiveAndEnabled &&
                 seenLevers.Add(lever))
             {
-                // Remains infinity if there are no zombies.
-                float nearestZombieDistance = float.PositiveInfinity;
+                // Use a finite distance for no zombies; Python rejects Infinity.
+                float nearestZombieDistance = 9999f;
 
                 foreach (Zombie zombies in allZombies)
                 {
@@ -180,6 +207,8 @@ public class AiAction : MonoBehaviour
     {
         DetectObjects();
         target = target ?? "";
+        ExecuteCount++;
+        ActionExecuted?.Invoke(action, target);
 
         // Keep searches/movement alive across identical periodic decisions.
         // Fleeing is re-evaluated so its direction tracks a moving zombie.
@@ -256,7 +285,15 @@ public class AiAction : MonoBehaviour
             return;
         }
 
-        Vector2 nextPosition = Vector2.MoveTowards(currentPosition, targetPosition, moveSpeed * Time.deltaTime);
+        // Around walls through the mansion's doorways, never out through a window.
+        Vector2 nextPosition = mover.Step(currentPosition, targetPosition, moveSpeed * Time.deltaTime, Time.time);
+        if (mover.Unreachable)
+        {
+            if (movementTarget != null)
+                unreachableUntil[movementTarget.name] = Time.time + 10f;
+            StopMovement();
+            return;
+        }
 
         transform.position = new Vector3(nextPosition.x, nextPosition.y, transform.position.z);
     }
@@ -267,6 +304,7 @@ public class AiAction : MonoBehaviour
         targetPosition = position;
         stoppingDistance = stopDistance;
         isMoving = true;
+        mover.Reset();
     }
 
 
@@ -279,6 +317,7 @@ public class AiAction : MonoBehaviour
         targetPosition = obj.transform.position;
         stoppingDistance = stopDistance;
         isMoving = true;
+        mover.Reset();
     }
 
 
@@ -302,6 +341,10 @@ public class AiAction : MonoBehaviour
 
         Vector2 fleePosition =
             (Vector2)transform.position + direction.normalized * fleeDistance;
+
+        // Flee within the house: the reachable point farthest from the zombie.
+        if (MansionNavigation.TryFleePoint(transform.position, zombie.transform.position, fleeDistance, out Vector2 reachable))
+            fleePosition = reachable;
 
         MoveToPosition(fleePosition);
 
@@ -537,6 +580,10 @@ public class AiAction : MonoBehaviour
         }
 
         Vector2 wanderPosition = (Vector2)transform.position + randomDirection * detectionRange;
+
+        // Search new ground: a reachable spot in the least-visited nearby region.
+        if (MansionNavigation.TryExplorePoint(transform.position, detectionRange * 1.6f, visits, out Vector2 explore))
+            wanderPosition = explore;
 
         MoveToPosition(wanderPosition);
         nextWanderTime = Time.time + 3f;

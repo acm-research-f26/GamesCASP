@@ -9,8 +9,17 @@ From PowerShell at the repository root, start the playtest environment with:
 The launcher starts Docker Desktop if needed, builds/starts the Python server with
 s(CASP) in the background, waits for port 6767, and opens the project's matching
 Unity Editor unless a project lock already exists. In Unity, open the Main scene,
-enter Play Mode, and click **Start Game**. If Play Mode was already running when
-the server started, restart Play Mode so the clients reconnect.
+enter Play Mode, and click **Start Game**. NPC clients retry the connection with
+backoff, so a server started (or restarted) during Play Mode is picked up without
+restarting Play Mode.
+
+**Choose the NPC AI before clicking Start Game.** The on-screen panel shows the
+current choice: press **B** to switch between the Behavior Tree and s(CASP), and
+**P** to switch the s(CASP) policy (Reasoned or Baseline). The same settings are on
+the scene's PlayerManager (Decision Backend, AI Experiment). With s(CASP) selected,
+the Console reports one `[AI] ... s(CASP) connected` line per NPC and a status block
+every 15 seconds, and the panel shows each NPC's answered requests and last action.
+See [Research/SCASP_REASONING.md](../Research/SCASP_REASONING.md).
 
 Use `.\Start-Playtest.ps1 -NoUnity` for the server alone. For a custom Editor
 installation, pass `-UnityEditorPath 'C:\path\to\Unity.exe'`. The script resolves

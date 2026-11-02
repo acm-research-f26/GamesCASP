@@ -111,4 +111,24 @@ class FactFactory:
                     f"{barricade_id}, {number(distance)}, {atom(zombie_id)})."
                 )
 
+            # Unity's JsonUtility cannot send dictionaries: the nearest visible zombie.
+            if barricade.get("nearest_zombie"):
+                facts.append(
+                    f"zombie_distance_to_barricade({barricade_id}, "
+                    f"{number(barricade['nearest_zombie_distance'])}, "
+                    f"{atom(barricade['nearest_zombie'])})."
+                )
+
+        # Reasoning context, used by the reasoned policy and ignored by the baseline.
+        # The actor's own ongoing activity supports commitment (no oscillation).
+        current_action = state.get("current_action") or ""
+        if current_action:
+            target = state.get("current_target") or ""
+            term = f"{atom(current_action)}({atom(target)})" if target else atom(current_action)
+            facts.append(f"current_action({term}, {actor}).")
+
+        # Strong negation: navigation proved there is no path to these targets.
+        for target in state.get("unreachable", []):
+            facts.append(f"-reachable({atom(target)}, {actor}).")
+
         return "\n".join(facts) + "\n"

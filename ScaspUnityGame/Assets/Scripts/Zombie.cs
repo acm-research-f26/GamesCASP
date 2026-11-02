@@ -21,6 +21,7 @@ public class Zombie : MonoBehaviour
     private SpriteRenderer spriteRenderer;
     private SpriteRenderer hitPlayer;
     private float lastAttackTime = 0f;
+    private readonly NavMover navigation = new NavMover(true);
 
     private void Awake()
     {
@@ -64,7 +65,9 @@ public class Zombie : MonoBehaviour
 
         if (distance > attackRange)
         {
-            transform.position += dir.normalized * moveSpeed * Time.deltaTime;
+            // Same chase, but around walls (and in through windows) instead of through them.
+            Vector2 next = navigation.Step(transform.position, targetAgent.transform.position, moveSpeed * Time.deltaTime, Time.time);
+            transform.position = new Vector3(next.x, next.y, transform.position.z);
         }
         else if (Time.time > lastAttackTime + attackCooldown)
         {
