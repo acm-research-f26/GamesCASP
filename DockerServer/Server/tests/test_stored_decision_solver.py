@@ -99,6 +99,14 @@ class StoredDecisionSolverTests(unittest.TestCase):
         self.assertEqual(self.solve("stored_fact(other, permanent, lever_activated, lever1, none, none).\n"),
                          {"pull_lever(lever1)"})
 
+    def test_two_lever_map_stops_hunting_when_complete(self):
+        memory = ("stored_fact(player1, permanent, lever_activated, lever1, none, none).\n"
+                  "stored_fact(player1, permanent, lever_activated, lever2, none, none).\n")
+        state = STATE | {"levers": [], "levers_to_win": 3, "levers_pulled_count": 2}
+        # Reproduce the old Unity snapshot, which invented a third objective.
+        self.assertEqual(self.solve(memory, state), {"hunt_lever"})
+        self.assertEqual(self.solve(memory, state | {"levers_to_win": 2}), {"wait"})
+
     def test_old_threats_are_queryable_without_overriding_current_state(self):
         memory = ("stored_fact(player1, mutable, agent_attacked, player1, old_attacker, 1).\n"
                   "stored_fact(player1, permanent, zombie_seen, old_zombie, none, 1).\n")

@@ -11,9 +11,6 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
     [SerializeField] private ScaspClient client;
     [SerializeField] private string actorId = "player1";
 
-    [Header("Game Objectives")]
-    [SerializeField] private int leversToWin = 3;
-
     [Header("Decision Settings")]
     [SerializeField] private float requestTimeout = 35f;
 
@@ -274,7 +271,7 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
         return new NpcState
         {
             health = agent.Health,
-            levers_to_win = leversToWin,
+            levers_to_win = levManager.TotalLevers,
             levers_pulled_count = levManager.ActivatedLevers,
             levers = levers.ToArray(),
             zombies = zombies.ToArray(),

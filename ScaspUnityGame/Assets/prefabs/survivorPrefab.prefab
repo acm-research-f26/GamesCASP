@@ -308,7 +308,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ScaspStrategy
   client: {fileID: 2728016071441532600}
   actorId: player1
-  leversToWin: 3
   requestTimeout: 35
 --- !u!114 &2728016071441532600
 MonoBehaviour:
