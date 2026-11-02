@@ -29,6 +29,8 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
     [SerializeField, Min(0f)] private float maxUnchangedSkip = 2f;
     [Tooltip("Replies older than this (real seconds) describe an outdated world and are discarded.")]
     [SerializeField, Min(0.1f)] private float maxResponseAge = 3f;
+    [Tooltip("Real-time seconds a queued decision waits for in-flight fact writes, so it reasons over them.")]
+    [SerializeField, Min(0f)] private float maxFactWaitBeforeDecision = 1f;
 
     private Agent agent;
     private AiAction aiAction;
@@ -41,6 +43,7 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
     private string pendingSignature = "";
     private string answeredSignature = "";
     private float answeredTime = float.NegativeInfinity;
+    private float decisionQueuedTime;
 
     private readonly List<Fact> storedFacts = new List<Fact>();
     private bool sendingStoredFacts;
@@ -102,6 +105,10 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
         {
             client.NpcDecisionReceived += HandleDecision;
             client.NpcDecisionError += HandleDecisionError;
+            client.NpcDecisionFailed += HandleNpcDecisionFailed;
+
+            // When switching strategies at runtime, this client must be enabled.
+            client.enabled = true;
         }
     }
 
@@ -111,6 +118,7 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
         {
             client.NpcDecisionReceived -= HandleDecision;
             client.NpcDecisionError -= HandleDecisionError;
+            client.NpcDecisionFailed -= HandleNpcDecisionFailed;
         }
 
         requestPending = false;
@@ -143,6 +151,11 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
         if (!decisionQueued || requestPending || client == null || !client.IsConnected)
             return;
 
+        // Let in-flight memories be acknowledged first so this decision reasons over them.
+        // A failing store must not stall decisions, so the wait is bounded.
+        if (sendingStoredFacts && Time.realtimeSinceStartup - decisionQueuedTime < maxFactWaitBeforeDecision)
+            return;
+
         if (!IsValidAtom(actorId))
         {
             Debug.LogError($"{name}: Invalid Prolog actor ID '{actorId}'.", this);
@@ -169,7 +182,7 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
 
         // Nothing the rules can tell apart has changed: the answer would be the same.
         string signature = Signature(state);
-        if (maxUnchangedSkip > 0f && signature == answeredSignature && Time.realtimeSinceStartup - answeredTime < maxUnchangedSkip)
+        if (!state.half_zombie && maxUnchangedSkip > 0f && signature == answeredSignature && Time.realtimeSinceStartup - answeredTime < maxUnchangedSkip)
         {
             Stats.Skipped++;
             return;
@@ -198,6 +211,12 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
             return;
         }
 
+        // A disabled strategy never runs Update, so it would never send this request.
+        if (Application.isPlaying && !isActiveAndEnabled)
+            Debug.LogWarning($"{name}: ScaspStrategy is selected but disabled; select it with SetStrategy.", this);
+
+        if (!decisionQueued)
+            decisionQueuedTime = Time.realtimeSinceStartup;
         decisionQueued = true;
     }
 
@@ -213,6 +232,8 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
         ScaspFactPayload.ValidateAtom(actorId, nameof(actorId));
         ScaspFactPayload.FromFact(fact); // Reject invalid IDs before accepting a fact into the queue.
         storedFacts.Add(fact);
+        // Newly observed memories can change a decision even if the physical snapshot does not.
+        answeredSignature = "";
         FlushStoredFacts();
     }
 
@@ -279,8 +300,12 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
 
         if (string.IsNullOrWhiteSpace(reply.Action))
         {
-            stats.Failures++;
-            AiDiagnostics.Warn($"{name}: s(CASP) reply {reply.RequestId} has no action.", this);
+            // A half-zombie with no visible target in the critical stage has
+            // no eligible action. This is a legitimate s(CASP) result, not a failure;
+            // preserve the current movement rather than issuing a spurious wait.
+            answeredSignature = pendingSignature;
+            answeredTime = Time.realtimeSinceStartup;
+            AiDiagnostics.Trace($"{name}: s(CASP) found no eligible action for {actorId} (request {reply.RequestId}).", this);
             return;
         }
 
@@ -312,6 +337,13 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
             AiDiagnostics.Warn($"{name}: s(CASP) request {requestId} failed ({stats.Errors} so far): {detail}", this);
     }
 
+    // A failed decision must not hold the strategy until requestTimeout.
+    private void HandleNpcDecisionFailed(string actor)
+    {
+        if (actor == actorId)
+            requestPending = false;
+    }
+
     // Validate identifiers before sending them to Prolog.
     private static bool IsValidAtom(string value)
     {
@@ -321,10 +353,17 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
     // Convert Unity's current world state into the Python request format.
     private NpcState BuildNpcState()
     {
+        if (levManager == null)
+        {
+            Debug.LogError($"{name}: Cannot build an NPC state without a LeverManager.", this);
+            return null;
+        }
+
         var transientFacts = aiAction.FetchTransientFacts();
 
         List<NpcLeverState> levers = new List<NpcLeverState>();
         List<NpcZombieState> zombies = new List<NpcZombieState>();
+        List<NpcHumanState> humans = new List<NpcHumanState>();
 
         // Collect lever state, visibility, and distances.
         foreach (Fact observation in transientFacts)
@@ -355,6 +394,16 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
                     distance = observation.Distance ?? 0
                 });
             }
+            else if(observation.Type == FactType.HumanSeen)
+            {
+                humans.Add(new NpcHumanState
+                {
+                    id = observation.SubjectId,
+                    health = observation.Health ?? 0,
+                    visible = true,
+                    distance = observation.Distance ?? 0
+                });
+            }
             else
             {
                 Debug.LogError($"Got invalid fact type. It was: {observation.Type}");
@@ -373,7 +422,14 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
             barricades = ObserveBarricades(),
             current_action = aiAction.CurrentAction ?? "",
             current_target = aiAction.CurrentTarget ?? "",
-            unreachable = aiAction.UnreachableTargets()
+            unreachable = aiAction.UnreachableTargets(),
+
+            // Infection is private to the actor; other humans remain observations only.
+            half_zombie = agent.IsHalfZombie,
+            current_time = Time.time,
+            bite_window_started_at = agent.IsHalfZombie ? agent.BiteWindowStartedAt : 0f,
+            bite_window_seconds = Agent.BiteWindowSeconds,
+            humans = humans.ToArray()
         };
     }
 
@@ -460,6 +516,16 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
         barricades.Sort((a, b) => a.reinforcement.CompareTo(b.reinforcement));
         foreach (var barricade in barricades)
             text.Append(barricade.id).Append(',');
+        text.Append('|').Append(s.half_zombie ? "infected" : "healthy");
+
+        // Who is alive, visible and nearest can change biting and suspicion rules.
+        // Avoid adding continuously changing timestamps to the snapshot signature;
+        // infected actors bypass the skip above to honor the bite timer exactly.
+        var humans = new List<NpcHumanState>(s.humans);
+        humans.Sort((a, b) => string.CompareOrdinal(a.id, b.id));
+        foreach (var human in humans)
+            text.Append(human.id).Append(':').Append(human.visible).Append(':').Append(human.health)
+                .Append(':').Append(Band(human.distance)).Append(';');
         return text.ToString();
     }
 

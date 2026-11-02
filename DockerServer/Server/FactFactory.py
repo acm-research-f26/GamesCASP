@@ -1,5 +1,21 @@
+from functools import lru_cache
+import math
+from pathlib import Path
 import re
 from typing import Any
+
+
+TIMED_BEHAVIOR_FILE = Path(__file__).resolve().parent / "half_zombie_timed_behavior.pl"
+
+
+@lru_cache(maxsize=None)
+def configured_bite_window_seconds(path=TIMED_BEHAVIOR_FILE):
+    """The s(CASP) rules are the single source of truth for the bite window."""
+    match = re.search(r"^bite_window_seconds\((\d+(?:\.\d+)?)\)\.",
+                      Path(path).read_text(encoding="utf-8"), re.MULTILINE)
+    if match is None:
+        raise RuntimeError(f"bite_window_seconds/1 not found in {path}")
+    return float(match.group(1))
 
 
 class FactFactory:
@@ -46,10 +62,12 @@ class FactFactory:
         def number(value):
             if isinstance(value, bool) or not isinstance(value, (int, float)):
                 raise ValueError(f"Invalid numeric value: {value!r}")
-            import math
             if not math.isfinite(value) or value < 0:
                 raise ValueError(f"Expected a finite nonnegative number: {value!r}")
-            return str(value)
+            if isinstance(value, int):
+                return str(value)
+            # Fixed point: str() can produce exponents such as 1e-05.
+            return f"{value:.6f}".rstrip("0").rstrip(".")
 
         actor = atom(actor)
 
@@ -59,6 +77,24 @@ class FactFactory:
             f"levers_to_win({number(state['levers_to_win'])}).",
             f"levers_pulled_count({number(state['levers_pulled_count'])}).",
         ]
+
+        # Half-zombie status and bite timer, for this actor only.
+        half_zombie = state.get("half_zombie", False)
+        if not isinstance(half_zombie, bool):
+            raise ValueError("half_zombie must be a boolean")
+
+        if half_zombie:
+            window = state.get("bite_window_seconds")
+            if window != configured_bite_window_seconds():
+                raise ValueError(
+                    f"bite_window_seconds {window!r} disagrees with s(CASP) "
+                    f"bite_window_seconds({configured_bite_window_seconds():g})"
+                )
+            facts.append(f"half_zombie({actor}).")
+            facts.append(f"current_time({number(state['current_time'])}).")
+            facts.append(
+                f"bite_window_started_at({number(state['bite_window_started_at'])}, {actor})."
+            )
 
         for lever in state.get("levers", []):
             lever_id = atom(lever["id"])
@@ -86,6 +122,23 @@ class FactFactory:
             facts.append(
                 f"distance({zombie_id}, {number(zombie['distance'])}, {actor})."
             )
+
+        # Nearby living humans: bite targets, or suspects to avoid.
+        # Only observable fields are read; another human's infection is never emitted.
+        for human in state.get("humans", []):
+            human_id = atom(human["id"])
+
+            if human_id == actor:
+                continue
+
+            facts.append(f"innocent({human_id}).")
+            facts.append(f"health({number(human['health'])}, {human_id}).")
+            facts.append(
+                f"distance({human_id}, {number(human['distance'])}, {actor})."
+            )
+
+            if human.get("visible", False):
+                facts.append(f"human_visible({human_id}, {actor}).")
 
         for barricade in state.get("barricades", []):
             barricade_id = atom(barricade["id"])

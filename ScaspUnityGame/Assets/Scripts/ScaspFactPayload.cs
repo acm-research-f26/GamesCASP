@@ -36,7 +36,12 @@ public sealed class ScaspFactPayload
 
     public static void ValidateAtom(string value, string parameterName)
     {
-        if (string.IsNullOrEmpty(value) || !Regex.IsMatch(value, @"^[a-z][A-Za-z0-9_]*\z"))
+        if (!IsAtom(value))
             throw new ArgumentException("ID must be a plain Prolog atom.", parameterName);
+    }
+
+    public static bool IsAtom(string value)
+    {
+        return !string.IsNullOrEmpty(value) && Regex.IsMatch(value, @"^[a-z][A-Za-z0-9_]*\z");
     }
 }

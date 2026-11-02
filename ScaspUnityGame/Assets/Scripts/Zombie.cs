@@ -77,6 +77,9 @@ public class Zombie : MonoBehaviour
             FlashRed(targetAgent.GetComponent<SpriteRenderer>());
 
             targetAgent.SetHealth(targetAgent.Health - attackDamage);
+
+            // A landed hit is a confirmed attack; nearby agents remember who was attacked.
+            AttackWitnessReporter.ReportZombieAttack(this, targetAgent);
         }
     }
 

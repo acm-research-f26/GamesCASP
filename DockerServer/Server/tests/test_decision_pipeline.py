@@ -55,11 +55,14 @@ class DecisionRequestTests(unittest.IsolatedAsyncioTestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.directory = Path(temporary.name)
+        self.facts = self.directory / "facts_temp.pl"
+        self.facts.write_text(":- use_module(library(scasp)).\n", encoding="utf-8")
         self.queries = []
 
     def ctx(self, message, socket):
         return (UnityRequestContext().add("json_message", message).add("server_dir", self.directory)
-                .add("scasp", "test-scasp").add("send_lock", asyncio.Lock()).add("socket", socket).build())
+                .add("scasp", "test-scasp").add("facts_temp_file", self.facts).add("facts_lock", asyncio.Lock())
+                .add("send_lock", asyncio.Lock()).add("socket", socket).build())
 
     async def fake_query(self, query_file, options=()):
         self.queries.append((query_file.read_text(encoding="utf-8"), tuple(options)))
@@ -93,6 +96,8 @@ class RealSolverExplanationTests(unittest.IsolatedAsyncioTestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.directory = Path(temporary.name)
+        self.facts = self.directory / "facts_temp.pl"
+        self.facts.write_text(":- use_module(library(scasp)).\n", encoding="utf-8")
         for rule in SERVER.glob("*.pl"):
             shutil.copy(rule, self.directory / rule.name)
 
@@ -100,7 +105,8 @@ class RealSolverExplanationTests(unittest.IsolatedAsyncioTestCase):
         socket = RecordingSocket()
         ctx = (UnityRequestContext().add("json_message", dict(request_type="npc_decision", actor="player1", state=npc_state, **message))
                .add("server_dir", self.directory).add("scasp", shutil.which("scasp"))
-               .add("send_lock", asyncio.Lock()).add("socket", socket).build())
+               .add("facts_temp_file", self.facts).add("facts_lock", asyncio.Lock())
+                .add("send_lock", asyncio.Lock()).add("socket", socket).build())
         await UnityNPCDecisionRequest(ctx).process()
         return socket.messages[-1]
 

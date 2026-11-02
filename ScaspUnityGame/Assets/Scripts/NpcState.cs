@@ -18,6 +18,14 @@ public class NpcState
     public string current_action = "";
     public string current_target = "";
     public string[] unreachable = Array.Empty<string>();
+    // Half-zombie status, timer, and nearby human targets.
+    // Times are game-time seconds (Time.time), so they pause with Time.timeScale.
+    // bite_window_seconds lets Python reject a timer that disagrees with s(CASP).
+    public bool half_zombie;
+    public float current_time;
+    public float bite_window_started_at;
+    public float bite_window_seconds;
+    public NpcHumanState[] humans = Array.Empty<NpcHumanState>();
 }
 
 [Serializable]
@@ -47,4 +55,14 @@ public class NpcBarricadeState
     // Nearest visible zombie, as the Behavior Tree's barricade buffer sees it ("" if none).
     public string nearest_zombie = "";
     public float nearest_zombie_distance;
+}
+
+// Only what an observer can see. Infection status is deliberately absent.
+[Serializable]
+public class NpcHumanState
+{
+    public string id;
+    public int health;
+    public bool visible;
+    public float distance;
 }

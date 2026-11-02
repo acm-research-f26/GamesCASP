@@ -6,7 +6,7 @@ import time
 import uuid
 
 from FactFactory import FactFactory
-from StoredFacts import StoredFact, require_atom, update_stored_facts
+from StoredFacts import StoredFact, require_atom, stored_facts_for_actor, update_stored_facts
 
 SOLVER_TIMEOUT_SECONDS = 30
 
@@ -207,6 +207,15 @@ class UnityNPCDecisionRequest(UnityActionRequest):
         logger.info("NPC snapshot received for %s (%s, request %s): zombies=%s", actor, policy,
                     request_id or "-", json.dumps(state.get("zombies", [])))
 
+        # Reason over this actor's own acknowledged memories as well as the
+        # current snapshot. Read under the lock that store_facts writes under.
+        async with self.ctx["facts_lock"]:
+            stored = self.ctx["facts_temp_file"].read_text(encoding="utf-8")
+        memories = stored_facts_for_actor(stored, actor)
+        facts += "".join(memories)
+        if memories:
+            logger.info("NPC memories included for %s: %d", actor, len(memories))
+
         snapshot_id = uuid.uuid4().hex
 
         snapshot_file = (
@@ -248,15 +257,21 @@ class UnityNPCDecisionRequest(UnityActionRequest):
             )
 
             if match is None:
-                raise RuntimeError(
-                    "s(CASP) returned no recognizable NPC action"
-                )
+                # No eligible action is a valid outcome (for example, a
+                # critical half zombie with no visible target), not a failure.
+                if re.search(r"^no models\s*$", output, re.MULTILINE) is None:
+                    raise RuntimeError(
+                        "s(CASP) returned no recognizable NPC action"
+                    )
+                logger.info("s(CASP) found no eligible action for %s", actor)
 
             reply = {
                 "message_type": "npc_action",
                 "actor": actor,
-                "action": match.group(1),
-                "target": match.group(2) or "",
+                # "no models" is legitimate for a critical half-zombie with no target.
+                # Keep request correlation, policy metadata, and measured timings.
+                "action": match.group(1) if match else "",
+                "target": (match.group(2) if match else None) or "",
                 "request_id": request_id,
                 "policy": policy,
                 "solver_ms": round(solver_ms, 2),

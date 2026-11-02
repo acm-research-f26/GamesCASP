@@ -46,6 +46,8 @@ public class ScaspClient : MonoBehaviour
     public event Action Disconnected;
 
     public string ServerUrl => serverUrl;
+    // Python could not produce a decision for this actor (validation or solver error).
+    public event Action<string> NpcDecisionFailed;
 
     [Serializable]
     private class Request
@@ -70,6 +72,7 @@ public class ScaspClient : MonoBehaviour
         public string error;
         public string detail;
         public string request_id;
+        public string request_type;
         // NPC-specific response fields
         public string actor;
         public string action;
@@ -283,7 +286,11 @@ public class ScaspClient : MonoBehaviour
                 else if (!string.IsNullOrEmpty(response.request_id) && NpcDecisionError != null)
                     NpcDecisionError.Invoke(response.request_id, response.error + ": " + response.detail);
                 else
+                {
                     Debug.LogError("s(CASP) " + response.error + ": " + response.detail, this);
+                    if (response.request_type == "npc_decision" && !string.IsNullOrEmpty(response.actor))
+                        NpcDecisionFailed?.Invoke(response.actor);
+                }
             }
             else if (response.message_type == "facts_stored")
             {
@@ -335,7 +342,7 @@ public class ScaspClient : MonoBehaviour
                     result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), token);
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
-                        Debug.LogWarning("s(CASP) server closed the connection. Restart Play Mode to reconnect.", this);
+                        Debug.LogWarning("s(CASP) server closed the connection. Attempting to reconnect.", this);
                         return;
                     }
                     if (result.MessageType != WebSocketMessageType.Text)

@@ -12,6 +12,10 @@ public class AiAction : MonoBehaviour
     [Header("Detection")]
     public float detectionRange = 5f;
 
+    [Header("Half-Zombie")]
+    [Tooltip("Minimum game-time seconds between bite requests, so a failed bite can be retried without spamming.")]
+    public float biteAttemptCooldown = 1f;
+
     [System.Serializable]
     public struct DetectedObject
     {
@@ -46,6 +50,12 @@ public class AiAction : MonoBehaviour
     private float nextWanderTime;
     private string currentAction;
     private string currentTarget;
+
+    // The half-zombie controller subscribes to this and performs the actual bite/infection.
+    // The event means "bite attempted in range", NOT "bite succeeded".
+    public event System.Action<Agent> BiteRequested;
+    private float nextBiteRequestTime;
+    private bool warnedMissingBiteHandler;
 
     public bool IsSearchingForLever => isSearchingForLever;
     public bool IsSearchingForBarricade => isSearchingForBarricade;
@@ -111,7 +121,8 @@ public class AiAction : MonoBehaviour
 
         foreach (Collider2D col in nearbyObjects)
         {
-            if (col.gameObject == gameObject)
+            // Ignore all of this agent's colliders, including child colliders.
+            if (col.transform.IsChildOf(transform))
                 continue;
 
             Vector2 direction = col.transform.position - transform.position;
@@ -137,6 +148,8 @@ public class AiAction : MonoBehaviour
         // An entity can have multiple colliders, but should produce one observation.
         var seenZombies = new HashSet<Zombie>();
         var seenLevers = new HashSet<LeverScript>();
+        var seenHumans = new HashSet<Agent>();
+        Agent self = GetComponent<Agent>();
         Zombie[] allZombies = FindObjectsByType<Zombie>(FindObjectsSortMode.None);
 
         foreach (var detected in detectedObjects)
@@ -156,10 +169,8 @@ public class AiAction : MonoBehaviour
                 facts.Add(new Fact(
                     FactType.ZombieSeen,
                     FactLifetime.Transient,
-                    zombie.gameObject.name,
-                    distance: Vector2.Distance(
-                        transform.position,
-                        zombie.transform.position)
+                    !string.IsNullOrEmpty(zombie.EntityId) ? zombie.EntityId : zombie.gameObject.name,
+                    distance: Vector2.Distance(transform.position, zombie.transform.position)
                 ));
             }
 
@@ -175,9 +186,7 @@ public class AiAction : MonoBehaviour
 
                 foreach (Zombie zombies in allZombies)
                 {
-                    float distance = Vector2.Distance(
-                        lever.transform.position,
-                        zombies.transform.position);
+                    float distance = Vector2.Distance(lever.transform.position, zombies.transform.position);
 
                     if (distance < nearestZombieDistance)
                     {
@@ -189,11 +198,28 @@ public class AiAction : MonoBehaviour
                     FactType.LeverSeen,
                     FactLifetime.Transient,
                     lever.gameObject.name,
-                    distance: Vector2.Distance(
-                        transform.position,
-                        lever.transform.position),
+                    distance: Vector2.Distance(transform.position, lever.transform.position),
                     nearestZombieDistance: nearestZombieDistance,
                     isOn: lever.isOn
+                ));
+            }
+
+            // Other living agents look human. Their infection status is never observed here.
+            Agent human = detected.obj.GetComponentInParent<Agent>();
+
+            if (human != null &&
+                human != self &&
+                human.isActiveAndEnabled &&
+                human.Health > 0 &&
+                ScaspFactPayload.IsAtom(human.AgentId) &&
+                seenHumans.Add(human))
+            {
+                facts.Add(new Fact(
+                    FactType.HumanSeen,
+                    FactLifetime.Transient,
+                    human.AgentId,
+                    distance: Vector2.Distance(transform.position, human.transform.position),
+                    health: human.Health
                 ));
             }
         }
@@ -212,10 +238,15 @@ public class AiAction : MonoBehaviour
 
         // Keep searches/movement alive across identical periodic decisions.
         // Fleeing is re-evaluated so its direction tracks a moving zombie.
+        // An attack keeps tracking its victim; biteAttemptCooldown limits repeated requests.
         if (action == currentAction && target == currentTarget && action != "run_from" &&
             (isMoving || isSearchingForLever || isSearchingForBarricade ||
-             action == "wait" || action == "hold_barricade"))
+             action == "wait" || action == "hold_barricade" ||
+             (action == "attack_human" && movementTarget != null)))
             return;
+
+        if (action != currentAction || target != currentTarget)
+            warnedMissingBiteHandler = false;
 
         currentAction = action;
         currentTarget = target;
@@ -257,13 +288,20 @@ public class AiAction : MonoBehaviour
                 HuntBarricade();
                 break;
 
+            case "move_to_human":
+                MoveToHuman(target);
+                break;
+
+            case "attack_human":
+                AttackHuman(target);
+                break;
+
             case "wait":
                 Wait();
                 break;
 
             default:
-                Debug.LogWarning(
-                    $"{name}: Unknown action '{action}'", this);
+                Debug.LogWarning($"{name}: Unknown action '{action}'", this);
                 break;
         }
     }
@@ -271,6 +309,27 @@ public class AiAction : MonoBehaviour
     // Move the NPC toward its current destination.
     private void UpdateMovement()
     {
+        // A bite is requested only after we actually reach the target's interaction range.
+        if (currentAction == "attack_human" && movementTarget != null)
+        {
+            Agent victim = movementTarget.GetComponent<Agent>();
+            if (!CanBite(victim))
+            {
+                StopMovement();
+                return;
+            }
+
+            if (Vector2.Distance(transform.position, victim.transform.position) <= interactionRange)
+            {
+                // Hold position but keep tracking, so a fleeing victim is pursued again.
+                isMoving = false;
+                TryRequestBite(victim);
+                return;
+            }
+
+            isMoving = true;
+        }
+
         if (!isMoving)
             return;
 
@@ -307,7 +366,6 @@ public class AiAction : MonoBehaviour
         mover.Reset();
     }
 
-
     private void MoveToObject(GameObject obj, float stopDistance = 0f)
     {
         if (obj == null)
@@ -320,11 +378,14 @@ public class AiAction : MonoBehaviour
         mover.Reset();
     }
 
-
     // Flee away from the specified zombie.
     protected virtual void RunFrom(string target)
     {
         GameObject zombie = FindNearest("Zombie", target);
+
+        // s(CASP) can also flee a suspected half-zombie, identified by its agent ID.
+        if (zombie == null && !string.IsNullOrEmpty(target))
+            zombie = FindNearest("Human", target);
 
         if (zombie == null)
         {
@@ -332,15 +393,13 @@ public class AiAction : MonoBehaviour
             return;
         }
 
-        Vector2 direction =
-            transform.position - zombie.transform.position;
+        Vector2 direction = transform.position - zombie.transform.position;
 
         if (direction.sqrMagnitude < 0.01f) {
             direction = Vector2.right;
         }
 
-        Vector2 fleePosition =
-            (Vector2)transform.position + direction.normalized * fleeDistance;
+        Vector2 fleePosition = (Vector2)transform.position + direction.normalized * fleeDistance;
 
         // Flee within the house: the reachable point farthest from the zombie.
         if (MansionNavigation.TryFleePoint(transform.position, zombie.transform.position, fleeDistance, out Vector2 reachable))
@@ -368,13 +427,11 @@ public class AiAction : MonoBehaviour
     // Move toward the specified barricade.
     protected virtual void MoveToBarricade(string target)
     {
-        GameObject barricade =
-            FindNearest("Barricade", target);
+        GameObject barricade = FindNearest("Barricade", target);
 
         if (barricade == null)
         {
-            Debug.LogWarning(
-                $"{name}: Barricade '{target}' not detected.");
+            Debug.LogWarning($"{name}: Barricade '{target}' not detected.");
             return;
         }
 
@@ -398,7 +455,6 @@ public class AiAction : MonoBehaviour
     }
 
     // Activate the specified lever.
-
     protected virtual void PullLever(string target)
     {
         GameObject lever = FindNearest("Lever", target, true);
@@ -415,7 +471,6 @@ public class AiAction : MonoBehaviour
         Debug.Log($"{name}: Moving to activate lever {target}");
     }
 
-
     // Move toward an available lever.
     protected virtual void MoveToLever(string target)
     {
@@ -428,6 +483,80 @@ public class AiAction : MonoBehaviour
         }
 
         MoveToObject(lever, 0f);
+    }
+
+    // Approach a living human chosen by s(CASP), using the same actor ID as NpcState.
+    protected virtual void MoveToHuman(string target)
+    {
+        GameObject human = FindNearest("Human", target);
+
+        if (human == null)
+        {
+            Debug.LogWarning($"{name}: Human '{target}' not detected.", this);
+            return;
+        }
+
+        MoveToObject(human, interactionRange);
+    }
+
+    // Move into range for an s(CASP) attack_human action, then request the bite.
+    // Samuel's gameplay controller owns success, animation, infection, and timer reset.
+    protected virtual void AttackHuman(string target)
+    {
+        Agent self = GetComponent<Agent>();
+        if (self == null || !self.IsHalfZombie)
+        {
+            Debug.LogWarning($"{name}: Ignoring attack_human because this agent is not a half-zombie.", this);
+            return;
+        }
+
+        GameObject humanObject = FindNearest("Human", target);
+        if (humanObject == null)
+        {
+            Debug.LogWarning($"{name}: Bite target '{target}' not detected.", this);
+            return;
+        }
+
+        // Track the victim; UpdateMovement requests the bite once it is in range.
+        MoveToObject(humanObject, interactionRange);
+
+        Agent human = humanObject.GetComponent<Agent>();
+        if (CanBite(human) && Vector2.Distance(transform.position, human.transform.position) <= interactionRange)
+        {
+            isMoving = false;
+            TryRequestBite(human);
+        }
+    }
+
+    // Only a living half-zombie with an open window may bite a different living agent.
+    private bool CanBite(Agent victim)
+    {
+        Agent self = GetComponent<Agent>();
+        return self != null && self.IsHalfZombie && !self.BiteWindowExpired && self.Health > 0 &&
+               victim != null && victim != self && victim.isActiveAndEnabled && victim.Health > 0;
+    }
+
+    private void TryRequestBite(Agent human)
+    {
+        if (!CanBite(human) || Time.time < nextBiteRequestTime)
+            return;
+
+        if (BiteRequested == null)
+        {
+            if (!warnedMissingBiteHandler)
+            {
+                Debug.LogWarning($"{name}: attack_human reached {human.name}, but no bite mechanic subscribed to AiAction.BiteRequested.", this);
+                warnedMissingBiteHandler = true;
+            }
+            return;
+        }
+
+        nextBiteRequestTime = Time.time + biteAttemptCooldown;
+
+        // Witnesses learn of the attempt only; the mechanic decides whether it succeeds.
+        AttackWitnessReporter.ReportBiteAttempt(GetComponent<Agent>(), human);
+        BiteRequested.Invoke(human);
+        Debug.Log($"{name}: Requested bite against {human.name}.", this);
     }
 
     // Search for an available lever.
@@ -450,6 +579,7 @@ public class AiAction : MonoBehaviour
         isSearchingForBarricade = false;
         currentAction = null;
         currentTarget = "";
+        warnedMissingBiteHandler = false;
         StopMovement();
     }
 
@@ -461,8 +591,7 @@ public class AiAction : MonoBehaviour
 
     private void SearchForLever()
     {
-        GameObject lever =
-            FindNearest("Lever", "", true);
+        GameObject lever = FindNearest("Lever", "", true);
 
         if (lever != null)
         {
@@ -552,6 +681,15 @@ public class AiAction : MonoBehaviour
                     candidate = detected.obj;
                     break;
 
+                case "Human":
+                    Agent human = detected.obj.GetComponentInParent<Agent>();
+                    if (human == null || human == GetComponent<Agent>() || !human.isActiveAndEnabled || human.Health <= 0)
+                        continue;
+
+                    candidate = human.gameObject;
+                    candidateId = human.AgentId;
+                    break;
+
                 default:
                     continue;
             }
@@ -570,6 +708,7 @@ public class AiAction : MonoBehaviour
 
         return nearest;
     }
+
     // Wander in a random direction while searching.
     protected void Wander()
     {
