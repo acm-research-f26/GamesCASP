@@ -92,7 +92,7 @@ GameObject:
   - component: {fileID: 167677301567529572}
   - component: {fileID: 6340857255680759753}
   m_Layer: 3
-  m_Name: zomb1
+  m_Name: Zomb1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -259,7 +259,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f5d24a4331400594c8b1d79a735c53a7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Zombie
-  moveSpeed: 2
+  moveSpeed: 1.5
   attackRange: 1
-  attackCooldown: 1
+  attackCooldown: 3
+  attackDamage: 1
   playerManager: {fileID: 0}

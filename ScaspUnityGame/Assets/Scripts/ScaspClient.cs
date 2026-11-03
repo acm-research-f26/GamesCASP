@@ -15,6 +15,8 @@ public class ScaspClient : MonoBehaviour
     [Header("s(CASP) Server")]
     [SerializeField] private string serverUrl = "ws://localhost:6767";
     [SerializeField, Min(0.1f)] private float factAcknowledgmentTimeout = 10f;
+    [Tooltip("Seconds between reconnection attempts; doubles after each failure, up to 10 seconds.")]
+    [SerializeField, Min(0.5f)] private float reconnectDelay = 1f;
     [Header("Original AI Events")]
     [SerializeField] private UnityEvent<string> onAction = new UnityEvent<string>();
 
@@ -34,6 +36,19 @@ public class ScaspClient : MonoBehaviour
     // Parameters are actor, action, target
     public event Action<string, string, string> NpcActionReceived;
 
+    // The full decision reply, with its request ID, timings and optional explanation.
+    public event Action<NpcDecisionResponse> NpcDecisionReceived;
+
+    // Python rejected or failed a decision request: request ID and detail.
+    public event Action<string, string> NpcDecisionError;
+
+    public event Action Connected;
+    public event Action Disconnected;
+
+    public string ServerUrl => serverUrl;
+    // Python could not produce a decision for this actor (validation or solver error).
+    public event Action<string> NpcDecisionFailed;
+
     [Serializable]
     private class Request
     {
@@ -45,6 +60,8 @@ public class ScaspClient : MonoBehaviour
         public NpcState state;
         public string request_id;
         public ScaspFactPayload[] facts;
+        public string policy;
+        public bool explain;
     }
 
     [Serializable]
@@ -55,12 +72,21 @@ public class ScaspClient : MonoBehaviour
         public string error;
         public string detail;
         public string request_id;
+        public string request_type;
         // NPC-specific response fields
         public string actor;
         public string action;
         public string target;
+        public string policy;
+        public float solver_ms;
+        public float server_ms;
+        public float explain_ms;
+        public string justification;
+        public string[] rejected;
     }
 
+    // Reconnects with backoff until the component is destroyed, so a server that
+    // starts late (or restarts) is picked up without restarting Play Mode.
     private async void Start()
     {
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -68,29 +94,47 @@ public class ScaspClient : MonoBehaviour
         return;
 #else
         lifetime = new CancellationTokenSource();
-        socket = new ClientWebSocket();
-        try
+        CancellationToken token = lifetime.Token;
+        int failures = 0;
+        while (!token.IsCancellationRequested)
         {
-            using (var connectTimeout = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token))
+            socket = new ClientWebSocket();
+            bool connected = false;
+            try
             {
-                connectTimeout.CancelAfter(TimeSpan.FromSeconds(10));
-                await socket.ConnectAsync(new Uri(serverUrl), connectTimeout.Token);
+                using (var connectTimeout = CancellationTokenSource.CreateLinkedTokenSource(token))
+                {
+                    connectTimeout.CancelAfter(TimeSpan.FromSeconds(10));
+                    await socket.ConnectAsync(new Uri(serverUrl), connectTimeout.Token);
+                }
+                connected = true;
+                failures = 0;
+                AiDiagnostics.Log($"{name}: s(CASP) connected to {serverUrl}", this);
+                Connected?.Invoke();
+                await ReceiveLoopAsync(token);
             }
-            Debug.Log("s(CASP) connected: " + serverUrl, this);
-            //await SendAsync(new Request { request_type = "get_action" });
-            await ReceiveLoopAsync(lifetime.Token);
-        }
-        catch (Exception exception)
-        {
-            if (!lifetime.IsCancellationRequested)
-                Debug.LogError("s(CASP) connection ended: " + exception.Message, this);
-        }
-        finally
-        {
-            FailPendingFactWrites();
-            lifetime.Cancel();
-            socket.Dispose();
-            socket = null;
+            catch (Exception exception)
+            {
+                if (!token.IsCancellationRequested && (connected || failures++ == 0))
+                    Debug.LogError($"{name}: s(CASP) {(connected ? "connection ended" : "server unreachable at " + serverUrl)}: {exception.Message}. Retrying; is the Docker server running?", this);
+            }
+            finally
+            {
+                FailPendingFactWrites();
+                socket.Dispose();
+                socket = null;
+                if (connected)
+                    Disconnected?.Invoke();
+            }
+
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(Mathf.Min(10f, reconnectDelay * (1 << Mathf.Min(failures, 4)))), token);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
         }
 #endif
     }
@@ -111,6 +155,18 @@ public class ScaspClient : MonoBehaviour
         }
 
         SendRequest(new Request {request_type = "npc_decision", actor = actor, state = state});
+    }
+
+    // Correlated request: the reply (or error) carries requestId back.
+    public void RequestNpcDecision(string actor, NpcState state, string requestId, string policy, bool explain)
+    {
+        if (string.IsNullOrWhiteSpace(actor) || state == null || string.IsNullOrEmpty(requestId))
+        {
+            Debug.LogError("NPC decision requires an actor, state and request ID.", this);
+            return;
+        }
+
+        SendRequest(new Request { request_type = "npc_decision", actor = actor, state = state, request_id = requestId, policy = policy, explain = explain });
     }
 
     // Completion means Python acknowledged the file write, not just a socket send.
@@ -227,8 +283,14 @@ public class ScaspClient : MonoBehaviour
                 if (!string.IsNullOrEmpty(response.request_id) &&
                     pendingFactWrites.TryGetValue(response.request_id, out var failedWrite))
                     failedWrite.TrySetException(new InvalidOperationException(response.error + ": " + response.detail));
+                else if (!string.IsNullOrEmpty(response.request_id) && NpcDecisionError != null)
+                    NpcDecisionError.Invoke(response.request_id, response.error + ": " + response.detail);
                 else
+                {
                     Debug.LogError("s(CASP) " + response.error + ": " + response.detail, this);
+                    if (response.request_type == "npc_decision" && !string.IsNullOrEmpty(response.actor))
+                        NpcDecisionFailed?.Invoke(response.actor);
+                }
             }
             else if (response.message_type == "facts_stored")
             {
@@ -246,9 +308,22 @@ public class ScaspClient : MonoBehaviour
             }
             else if (response.message_type == "npc_action")
             {
-                Debug.Log($"s(CASP) NPC: {response.actor}, " + $"Action: {response.action}, Target: {response.target}", this);
+                AiDiagnostics.Trace($"s(CASP) reply for {response.actor} (request {response.request_id}): {response.action}({response.target}), solver {response.solver_ms:F0} ms", this);
 
                 NpcActionReceived?.Invoke(response.actor, response.action, response.target);
+                NpcDecisionReceived?.Invoke(new NpcDecisionResponse
+                {
+                    Actor = response.actor,
+                    Action = response.action,
+                    Target = response.target ?? "",
+                    RequestId = response.request_id ?? "",
+                    Policy = response.policy ?? "",
+                    SolverMs = response.solver_ms,
+                    ServerMs = response.server_ms,
+                    ExplainMs = response.explain_ms,
+                    Justification = response.justification ?? "",
+                    Rejected = response.rejected ?? Array.Empty<string>()
+                });
             }
         }
     }
@@ -267,7 +342,7 @@ public class ScaspClient : MonoBehaviour
                     result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), token);
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
-                        Debug.LogWarning("s(CASP) server closed the connection. Restart Play Mode to reconnect.", this);
+                        Debug.LogWarning("s(CASP) server closed the connection. Attempting to reconnect.", this);
                         return;
                     }
                     if (result.MessageType != WebSocketMessageType.Text)
@@ -299,4 +374,19 @@ public class ScaspClient : MonoBehaviour
         foreach (var completion in pendingFactWrites.Values)
             completion.TrySetCanceled();
     }
+}
+
+// One s(CASP) decision reply as Python sent it.
+public sealed class NpcDecisionResponse
+{
+    public string Actor;
+    public string Action;
+    public string Target;
+    public string RequestId;
+    public string Policy;
+    public float SolverMs;
+    public float ServerMs;
+    public float ExplainMs;
+    public string Justification;
+    public string[] Rejected;
 }

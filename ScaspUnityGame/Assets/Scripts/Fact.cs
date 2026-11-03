@@ -12,6 +12,12 @@ public enum FactType
     BarricadeSearchStarted,
     BarricadeSearchStopped,
     BarricadeSeen
+    // Transient: another living agent in perception range. Never carries infection status.
+    HumanSeen,
+    // Permanent witnessed events. Subject is the attacker, target is the victim.
+    ZombieAttackWitnessed,
+    BiteAttemptWitnessed, // attempt only, not proof that the bite succeeded
+    BiteWitnessed // gameplay confirmed a successful infectious bite
 }
 
 public enum FactLifetime
@@ -34,6 +40,7 @@ public sealed class Fact
     public IReadOnlyDictionary<string, float> ZombieDistances { get; }
     
     public bool? IsOn { get; }
+    public int? Health { get; }
 
     public Fact(FactType type, FactLifetime lifetime, string subjectId, string targetId = null,
         float? distance = null, float? nearestZombieDistance = null, bool? isOn = null,
@@ -52,6 +59,8 @@ public sealed class Fact
         if (nearestZombieDistance.HasValue &&
             (float.IsNaN(nearestZombieDistance.Value) || nearestZombieDistance.Value < 0f))
             throw new ArgumentOutOfRangeException(nameof(nearestZombieDistance));
+        if (health.HasValue && health.Value < 0)
+            throw new ArgumentOutOfRangeException(nameof(health));
 
         if (reinforcement.HasValue && (float.IsNaN(reinforcement.Value) ||
             float.IsInfinity(reinforcement.Value) || reinforcement.Value < 0f))
@@ -68,6 +77,7 @@ public sealed class Fact
         ZombieDistances = new System.Collections.ObjectModel.ReadOnlyDictionary<string, float>(distances);
         Reinforcement = reinforcement;
         NearestZombieDistance = nearestZombieDistance;
+        Health = health;
         Type = type;
         Lifetime = lifetime;
         SubjectId = subjectId;

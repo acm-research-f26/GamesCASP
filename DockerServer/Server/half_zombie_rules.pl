@@ -19,6 +19,29 @@ suspected_infected(Observer, Subject) :-
     witnessed_bite(Observer, _, Subject),
     not -half_zombie(Subject).
 
+% Stored memories arrive as stored_fact(Observer, Lifetime, Type, Subject, Target,
+% Distance); Python supplies only the deciding actor's own clauses. For witnessed
+% events Subject is the attacker and Target is the victim.
+% A confirmed (gameplay-reported) bite is the existing witnessed_bite evidence.
+witnessed_bite(Observer, Biter, Victim) :-
+    stored_fact(Observer, permanent, bite_witnessed, Biter, Victim, _).
+
+% An attempt is not a successful bite: it implicates only the biter.
+witnessed_bite_attempt(Observer, Biter, Victim) :-
+    stored_fact(Observer, permanent, bite_attempt_witnessed, Biter, Victim, _).
+
+suspected_infected(Observer, Subject) :-
+    witnessed_bite_attempt(Observer, Subject, _),
+    not -half_zombie(Subject).
+
+% Game rule: a human attacked by a full zombie becomes a half zombie.
+witnessed_zombie_attack(Observer, Zombie, Victim) :-
+    stored_fact(Observer, permanent, zombie_attack_witnessed, Zombie, Victim, _).
+
+suspected_infected(Observer, Subject) :-
+    witnessed_zombie_attack(Observer, _, Subject),
+    not -half_zombie(Subject).
+
 % Do not derive half_zombie from suspicion: witnesses can have incomplete knowledge.
 % Only uninfected innocents react to their own observations of a nearby suspect.
 % Merely having half_zombie(Subject) in the world does not inform every observer.

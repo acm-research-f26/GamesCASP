@@ -121,6 +121,19 @@ For permanent facts, activate a lever within an NPC receiver's observation range
 For mutable facts, select a spawned s(CASP) NPC and use **Tools > Facts > Send
 Mutable Test Fact (Play Mode)**. Zombie combat currently updates health but does
 not emit `AgentAttacked` facts, so combat alone will not populate mutable storage.
+### Stored facts in decisions
+
+Each `npc_decision` reads `facts_temp.pl` under the same lock and appends the deciding
+actor's own `stored_fact/6` clauses to its snapshot, so s(CASP) reasons over them.
+Other actors' clauses and legacy session facts are left out. Store and decision
+requests on one connection are handled in order, so a decision sent after a
+`store_facts` message sees that fact even before Unity receives the acknowledgment.
+`ScaspStrategy` also holds a queued decision while a fact write is in flight (at most
+`maxFactWaitBeforeDecision`, 1 s by default), so a failing store never stalls
+decisions. `half_zombie_rules.pl` turns the witnessed-event types
+(`zombie_attack_witnessed`, `bite_attempt_witnessed`, `bite_witnessed`) into
+suspicion; Python accepts them only as permanent facts with a victim `target_id`. See
+[HALF_ZOMBIES.md](HALF_ZOMBIES.md#witnessed-events-and-stored-memories).
 
 ## Verification
 
@@ -192,9 +205,10 @@ Select-String -Path DockerServer/Server/facts_temp.pl -Pattern '^stored_fact\('
 ```
 
 The file is reset when the server starts, so inspect it before restarting the server.
-`Survivor1` still uses the local-only sample strategy; the spawned `playerPrefab`
-NPCs use Python. Zombie attacks currently log messages but do not emit `AgentAttacked`
-facts; lever activation is the gameplay event source for this storage path.
+The spawned `survivorPrefab` NPCs (formerly `playerPrefab`) use Python when
+`PlayerManager` selects the s(CASP) backend. Besides lever activation, zombie hits
+now emit facts through `AttackWitnessReporter`: a mutable `AgentAttacked` for the
+victim and a permanent `ZombieAttackWitnessed` for each observer in range.
 
 ### Inspecting mutable and transient delivery in Play Mode
 

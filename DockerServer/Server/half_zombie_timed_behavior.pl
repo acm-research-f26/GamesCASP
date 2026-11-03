@@ -8,8 +8,8 @@
 % bite_window_started_at(Start, Actor).
 % Supply ONE current start per half zombie: initial infection or latest
 % successful bite BEFORE expiry. Historical bit_human facts do not reset time.
-bite_window_seconds(30).
-critical_bite_seconds(15).
+bite_window_seconds(5).
+critical_bite_seconds(4).
 
 % Remaining time is useful to inspect. Stage predicates below compare the
 % timestamps directly so negation does not have to constrain an intermediate

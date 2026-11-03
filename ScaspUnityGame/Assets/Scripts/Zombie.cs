@@ -21,6 +21,7 @@ public class Zombie : MonoBehaviour
     private SpriteRenderer spriteRenderer;
     private SpriteRenderer hitPlayer;
     private float lastAttackTime = 0f;
+    private readonly NavMover navigation = new NavMover(true);
 
     private void Awake()
     {
@@ -64,7 +65,9 @@ public class Zombie : MonoBehaviour
 
         if (distance > attackRange)
         {
-            transform.position += dir.normalized * moveSpeed * Time.deltaTime;
+            // Same chase, but around walls (and in through windows) instead of through them.
+            Vector2 next = navigation.Step(transform.position, targetAgent.transform.position, moveSpeed * Time.deltaTime, Time.time);
+            transform.position = new Vector3(next.x, next.y, transform.position.z);
         }
         else if (Time.time > lastAttackTime + attackCooldown)
         {
@@ -74,6 +77,23 @@ public class Zombie : MonoBehaviour
             FlashRed(targetAgent.GetComponent<SpriteRenderer>());
 
             targetAgent.SetHealth(targetAgent.Health - attackDamage);
+
+            // A surviving NPC becomes a half-zombie after a zombie attack.
+            if (targetAgent.Health > 0 && targetAgent.MarkHalfZombie())
+            {
+                Debug.Log($"[INFECTION] {targetAgent.AgentId} became a HALF-ZOMBIE! Timer started: {Agent.BiteWindowSeconds}s");
+            }
+
+            // A landed hit is a confirmed attack; nearby agents remember who was attacked.
+            AttackWitnessReporter.ReportZombieAttack(this, targetAgent);
+
+            if (targetAgent.Health > 0)
+            {
+                Vector2 direction =targetAgent.transform.position - transform.position;
+                Rigidbody2D body = targetAgent.GetComponent<Rigidbody2D>();
+                body.linearVelocity = direction.normalized * 6f;
+                targetAgent.GetComponent<AiAction>().knockbackTime = 0.2f;
+            }
         }
     }
 
@@ -101,7 +121,7 @@ public class Zombie : MonoBehaviour
 
         foreach (Agent agent in playerManager.players)
         {
-            if (agent == null || agent.Health <= 0)
+            if (agent == null || agent.Health <= 0 || agent.IsHalfZombie)
                 continue;
 
             float distance = Vector3.Distance(transform.position, agent.transform.position);

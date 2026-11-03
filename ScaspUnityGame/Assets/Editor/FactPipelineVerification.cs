@@ -177,11 +177,12 @@ public static class FactPipelineVerification
                   .Contains($"{noStrategy.name}: Unknown action 'unknown'"),
                 "Unknown actions warn without executing a known action");
 
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/prefabs/Survivor1.prefab");
+            // Survivor1 was renamed to Player1 (player-controlled); the NPC prefab is survivorPrefab.
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/prefabs/survivorPrefab.prefab");
             var prefabAgent = prefab.GetComponent<Agent_Parent_Script>();
             var prefabSettings = new SerializedObject(prefabAgent);
             check(prefabSettings.FindProperty("strategyComponent").objectReferenceValue ==
-                  prefab.GetComponent<SampleFactStrategy>(), "Survivor prefab has its sample strategy assigned");
+                  prefab.GetComponent<ScaspStrategy>(), "Survivor prefab has its s(CASP) strategy assigned");
             Debug.Log($"FACT PIPELINE VERIFIED: {checks} checks passed.");
         }
         finally

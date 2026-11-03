@@ -15,29 +15,37 @@ CURRENT_DIR = Path(__file__).resolve().parent
 logger = logging.getLogger(__name__)
 
 
+def error_response(request, error, exc):
+    # request_type and actor let Unity release a pending NPC decision.
+    message = request.ctx["json_message"]
+
+    def text(field):
+        value = message.get(field)
+        return value if isinstance(value, str) else None
+
+    return json.dumps({
+        "message_type": "error",
+        "error": error,
+        "detail": str(exc),
+        "request_id": message.get("request_id"),
+        "request_type": text("request_type"),
+        "actor": text("actor"),
+    })
+
+
 async def process_request(request, socket, send_lock):
     try:
         await request.process()
 
     except ValueError as exc:
         async with send_lock:
-            await socket.send(json.dumps({
-                "message_type": "error",
-                "error": "invalid_request",
-                "detail": str(exc),
-                "request_id": request.ctx["json_message"].get("request_id"),
-            }))
+            await socket.send(error_response(request, "invalid_request", exc))
 
     except (RuntimeError, OSError) as exc:
         logger.exception("Request processing failed")
 
         async with send_lock:
-            await socket.send(json.dumps({
-                "message_type": "error",
-                "error": "processing_failed",
-                "detail": str(exc),
-                "request_id": request.ctx["json_message"].get("request_id"),
-            }))
+            await socket.send(error_response(request, "processing_failed", exc))
 
 
 async def handler(socket, *, server_dir, scasp, facts_lock):
