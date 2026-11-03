@@ -80,6 +80,14 @@ public class Zombie : MonoBehaviour
 
             // A landed hit is a confirmed attack; nearby agents remember who was attacked.
             AttackWitnessReporter.ReportZombieAttack(this, targetAgent);
+
+            if (targetAgent.Health > 0)
+            {
+                Vector2 direction =targetAgent.transform.position - transform.position;
+                Rigidbody2D body = targetAgent.GetComponent<Rigidbody2D>();
+                body.linearVelocity = direction.normalized * 6f;
+                targetAgent.GetComponent<AiAction>().knockbackTime = 0.2f;
+            }
         }
     }
 

@@ -31,6 +31,8 @@ public class AiAction : MonoBehaviour
         }
     }
 
+    public float knockbackTime = 0f;
+
     public List<DetectedObject> detectedObjects = new List<DetectedObject>();
 
     [Header("Transient Query Debug (Play Mode)")]
@@ -309,6 +311,16 @@ public class AiAction : MonoBehaviour
     // Move the NPC toward its current destination.
     private void UpdateMovement()
     {
+        // knockback timer check
+        if (knockbackTime > 0f)
+        {
+            knockbackTime -= Time.deltaTime;
+            if (knockbackTime <= 0f) {
+                GetComponent<Rigidbody2D>().linearVelocity = Vector2.zero;
+                mover.Reset();
+            }
+            return;
+        }
         // A bite is requested only after we actually reach the target's interaction range.
         if (currentAction == "attack_human" && movementTarget != null)
         {
