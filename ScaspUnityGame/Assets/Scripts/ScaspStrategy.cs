@@ -409,6 +409,8 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
                     distance = observation.Distance.Value,
                     reinforcement = observation.Reinforcement.Value,
                     zombie_distances = distances.ToArray()
+                });
+            }
             else if(observation.Type == FactType.HumanSeen)
             {
                 humans.Add(new NpcHumanState
@@ -433,7 +435,7 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
             levers = levers.ToArray(),
             zombies = zombies.ToArray(),
 
-            barricades = barricades.ToArray()
+            barricades = barricades.ToArray(),
             // The game's real requirement, as the Behavior Tree's blackboard reads it.
             levers_to_win = levManager != null ? levManager.TotalLevers : leversToWin,
             current_action = aiAction.CurrentAction ?? "",
@@ -451,8 +453,7 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
 
     // Same perception as the Behavior Tree's BarricadeObservationBuffer: windows in
     // detection range, their health, and the nearest zombie this agent can see.
-    private NpcBarricadeState[] 
-    ()
+    private NpcBarricadeState[] ObserveBarricades()
     {
         var windows = new List<Window>();
         var zombies = new List<Zombie>();

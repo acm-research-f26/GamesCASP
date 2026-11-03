@@ -11,7 +11,7 @@ public enum FactType
     LeverSearchStopped,
     BarricadeSearchStarted,
     BarricadeSearchStopped,
-    BarricadeSeen
+    BarricadeSeen,
     // Transient: another living agent in perception range. Never carries infection status.
     HumanSeen,
     // Permanent witnessed events. Subject is the attacker, target is the victim.
@@ -44,7 +44,7 @@ public sealed class Fact
 
     public Fact(FactType type, FactLifetime lifetime, string subjectId, string targetId = null,
         float? distance = null, float? nearestZombieDistance = null, bool? isOn = null,
-        float? reinforcement = null, IReadOnlyDictionary<string, float> zombieDistances = null)
+        float? reinforcement = null, IReadOnlyDictionary<string, float> zombieDistances = null, int? health = null)
     {
         if (!Enum.IsDefined(typeof(FactType), type))
             throw new ArgumentOutOfRangeException(nameof(type));
