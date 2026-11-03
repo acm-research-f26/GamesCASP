@@ -2,12 +2,22 @@ import asyncio
 import json
 import logging
 import re
+import time
 import uuid
 
 from FactFactory import FactFactory
-from StoredFacts import StoredFact, require_atom, update_stored_facts
+from StoredFacts import StoredFact, require_atom, stored_facts_for_actor, update_stored_facts
 
 SOLVER_TIMEOUT_SECONDS = 30
+
+# "baseline" keeps the original rules (default, for comparison with the Behavior
+# Tree); "reasoned" is the defeasible policy in reasoned_innocent.pl.
+POLICIES = {
+    "baseline": "half_zombie_timed_behavior.pl",
+    "reasoned": "reasoned_behavior.pl",
+}
+# Note: "-s1" is passed first; these follow it.
+EXPLAIN_OPTIONS = ("--tree", "--mid", "--pos")
 logger = logging.getLogger(__name__)
 
 
@@ -82,10 +92,11 @@ class UnityActionRequest(UnityRequest):
             snapshot_file.unlink(missing_ok=True)
             query_file.unlink(missing_ok=True)
 
-    async def query_scasp(self, query_file):
+    async def query_scasp(self, query_file, options=()):
         process = await asyncio.create_subprocess_exec(
             self.ctx["scasp"],
             "-s1",
+            *options,
             query_file.name,
             cwd=self.ctx["server_dir"],
             stdout=asyncio.subprocess.PIPE,
@@ -186,8 +197,24 @@ class UnityNPCDecisionRequest(UnityActionRequest):
                 f"Invalid NPC state: {exc}"
             ) from exc
 
-        logger.info("NPC snapshot received for %s: zombies=%s", actor,
-                    json.dumps(state.get("zombies", [])))
+        policy = message.get("policy") or "baseline"
+        if policy not in POLICIES:
+            raise ValueError(f"policy must be one of {sorted(POLICIES)}")
+        explain = message.get("explain") is True
+        request_id = message.get("request_id") or ""
+        started = time.perf_counter()
+
+        logger.info("NPC snapshot received for %s (%s, request %s): zombies=%s", actor, policy,
+                    request_id or "-", json.dumps(state.get("zombies", [])))
+
+        # Reason over this actor's own acknowledged memories as well as the
+        # current snapshot. Read under the lock that store_facts writes under.
+        async with self.ctx["facts_lock"]:
+            stored = self.ctx["facts_temp_file"].read_text(encoding="utf-8")
+        memories = stored_facts_for_actor(stored, actor)
+        facts += "".join(memories)
+        if memories:
+            logger.info("NPC memories included for %s: %d", actor, len(memories))
 
         snapshot_id = uuid.uuid4().hex
 
@@ -204,12 +231,15 @@ class UnityNPCDecisionRequest(UnityActionRequest):
 
             query_file.write_text(
                 f"#include('{snapshot_file.name}').\n"
-                f"#include('half_zombie_timed_behavior.pl').\n\n"
+                f"#include('{POLICIES[policy]}').\n\n"
                 f"?- action(X, {actor}).\n",
                 encoding="utf-8"
             )
 
-            raw_output = await self.query_scasp(query_file)
+            # Explanations come from the solver itself: its justification tree.
+            solver_started = time.perf_counter()
+            raw_output = await self.query_scasp(query_file, EXPLAIN_OPTIONS if explain else ())
+            solver_ms = (time.perf_counter() - solver_started) * 1000
 
             output = re.sub(
                 r"\x1b\[[0-?]*[ -/]*[@-~]",
@@ -227,23 +257,63 @@ class UnityNPCDecisionRequest(UnityActionRequest):
             )
 
             if match is None:
-                raise RuntimeError(
-                    "s(CASP) returned no recognizable NPC action"
-                )
+                # No eligible action is a valid outcome (for example, a
+                # critical half zombie with no visible target), not a failure.
+                if re.search(r"^no models\s*$", output, re.MULTILINE) is None:
+                    raise RuntimeError(
+                        "s(CASP) returned no recognizable NPC action"
+                    )
+                logger.info("s(CASP) found no eligible action for %s", actor)
 
-            response = json.dumps({
+            reply = {
                 "message_type": "npc_action",
                 "actor": actor,
-                "action": match.group(1),
-                "target": match.group(2) or ""
-            })
+                # "no models" is legitimate for a critical half-zombie with no target.
+                # Keep request correlation, policy metadata, and measured timings.
+                "action": match.group(1) if match else "",
+                "target": (match.group(2) if match else None) or "",
+                "request_id": request_id,
+                "policy": policy,
+                "solver_ms": round(solver_ms, 2),
+            }
+
+            if explain:
+                explain_started = time.perf_counter()
+                reply["justification"] = justification(output)
+                reply["rejected"] = await self.rejected_actions(snapshot_file, actor, policy)
+                reply["explain_ms"] = round((time.perf_counter() - explain_started) * 1000, 2)
+
+            reply["server_ms"] = round((time.perf_counter() - started) * 1000, 2)
+            logger.info("NPC decision for %s (request %s): %s(%s) solver %.0f ms", actor,
+                        request_id or "-", reply["action"], reply["target"], solver_ms)
 
             async with self.ctx["send_lock"]:
-                await self.ctx["socket"].send(response)
+                await self.ctx["socket"].send(json.dumps(reply))
 
         finally:
             snapshot_file.unlink(missing_ok=True)
             query_file.unlink(missing_ok=True)
+
+    # Candidates the solver proves are defeated: why each alternative lost.
+    async def rejected_actions(self, snapshot_file, actor, policy):
+        query_file = self.ctx["server_dir"] / f"npc_rejected_{uuid.uuid4().hex}.pl"
+        try:
+            query_file.write_text(
+                f"#include('{snapshot_file.name}').\n"
+                f"#include('{POLICIES[policy]}').\n\n"
+                f"?- candidate_action(A, {actor}), defeated(A, {actor}).\n",
+                encoding="utf-8"
+            )
+            output = await self.query_scasp(query_file, ("-s0",))
+            return sorted(set(re.findall(r"^[ \t]*A[ \t]*=[ \t]*(\S+?)[ \t]*$", output, re.MULTILINE)))
+        finally:
+            query_file.unlink(missing_ok=True)
+
+
+# The positive justification tree of the first answer, as printed by the solver.
+def justification(output):
+    match = re.search(r"JUSTIFICATION_TREE:\s*\n(.*?)\n\s*(?:global_constraint|MODEL:)", output, re.S)
+    return match.group(1).rstrip() if match else ""
 
 
 class UnityTempFactRequest(UnityRequest):

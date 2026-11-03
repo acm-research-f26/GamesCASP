@@ -139,7 +139,7 @@ public static class StoredFactVerification
             var ready = JsonUtility.FromJson<ServerReady>(readyLine);
             check(ready != null && !string.IsNullOrEmpty(ready.url), "Isolated Python server started");
 
-            var npcPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/prefabs/playerPrefab.prefab");
+            var npcPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/prefabs/survivorPrefab.prefab");
             fixture = (GameObject)PrefabUtility.InstantiatePrefab(npcPrefab);
             fixture.name = "StoredFactVerification";
             fixture.hideFlags = HideFlags.HideAndDontSave;
