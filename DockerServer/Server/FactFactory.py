@@ -156,12 +156,19 @@ class FactFactory:
                 f"{number(barricade['distance'])}, {actor})."
             )
 
-            for zombie_id, distance in barricade.get(
-                "zombie_distances", {}
-            ).items():
+            # Unity JsonUtility serializes arrays, not dictionaries. Keep the
+            # original dictionary form available for existing callers.
+            distances = barricade.get("zombie_distances", [])
+            if isinstance(distances, dict):
+                distances = [{"id": key, "distance": value} for key, value in distances.items()]
+            if not isinstance(distances, list):
+                raise ValueError("zombie_distances must be an array or object")
+            for entry in distances:
+                if not isinstance(entry, dict):
+                    raise ValueError("Each zombie distance must be an object")
                 facts.append(
                     f"zombie_distance_to_barricade("
-                    f"{barricade_id}, {number(distance)}, {atom(zombie_id)})."
+                    f"{barricade_id}, {number(entry['distance'])}, {atom(entry['id'])})."
                 )
 
             # Unity's JsonUtility cannot send dictionaries: the nearest visible zombie.

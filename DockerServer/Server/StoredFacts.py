@@ -116,3 +116,10 @@ def update_stored_facts(path, facts):
         temporary.replace(path)
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def select_actor_stored_facts(contents, actor):
+    """Select canonical server-written knowledge, excluding legacy/world facts."""
+    require_atom(actor, "actor")
+    prefix = f"stored_fact({actor}, "
+    return "".join(line + "\n" for line in contents.splitlines() if line.startswith(prefix))

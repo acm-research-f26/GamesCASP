@@ -6,7 +6,7 @@ import time
 import uuid
 
 from FactFactory import FactFactory
-from StoredFacts import StoredFact, require_atom, stored_facts_for_actor, update_stored_facts
+from StoredFacts import StoredFact, require_atom, select_actor_stored_facts, update_stored_facts, stored_facts_for_actor
 
 SOLVER_TIMEOUT_SECONDS = 30
 

@@ -52,6 +52,7 @@ public class NpcBarricadeState
     public bool visible;
     public float reinforcement;
     public float distance;
+    public NpcZombieState[] zombie_distances = Array.Empty<NpcZombieState>();
     // Nearest visible zombie, as the Behavior Tree's barricade buffer sees it ("" if none).
     public string nearest_zombie = "";
     public float nearest_zombie_distance;

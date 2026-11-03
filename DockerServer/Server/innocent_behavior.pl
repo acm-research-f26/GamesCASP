@@ -1,4 +1,4 @@
-
+#include('stored_knowledge.pl').
 can_act(Actor) :-
     health(Health, Actor),
     Health #> 0.
@@ -30,7 +30,8 @@ levers_remaining :-
 
 lever_available(Lever, Actor) :-
     lever_visible(Lever, Actor),
-    lever_state(Lever, unpulled).
+    lever_state(Lever, unpulled),
+    not remembered_lever_activation(Lever, Actor).
 
 visible_available_lever(Actor) :-
     lever_available(_, Actor).

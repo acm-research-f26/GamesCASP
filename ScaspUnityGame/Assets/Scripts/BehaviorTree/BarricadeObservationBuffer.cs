@@ -45,7 +45,7 @@ public sealed class BarricadeObservationBuffer
             Window window = detected.obj.GetComponentInParent<Window>();
             if (window != null && window.isActiveAndEnabled) windows.Add(window);
             Zombie zombie = detected.obj.GetComponentInParent<Zombie>();
-            if (zombie != null && zombie.isActiveAndEnabled && knownZombieIds.Contains(zombie.gameObject.name))
+            if (zombie != null && zombie.isActiveAndEnabled && knownZombieIds.Contains(zombie.EntityId))
                 zombies.Add(zombie);
         }
 
