@@ -8,6 +8,7 @@ public enum NpcDecisionBackend { BehaviorTree, Scasp }
 public class PlayerManager : MonoBehaviour
 {
     [Header("NPC Settings")]
+    [SerializeField, Min(0)] private int npcCountOverride = 0; // 0 = use GameSettings
     [SerializeField] private float spawnSpacing = 2f;
     [SerializeField] private Vector2 spawnPosition = Vector2.zero;
     [SerializeField, Min(0.1f)] private float decisionInterval = 0.5f;
@@ -68,7 +69,8 @@ public class PlayerManager : MonoBehaviour
             Debug.LogError("Assign the map's LeverManager before spawning tree agents.", this);
             return;
         }
-        int count = GameSettings.InnocentCount;
+        
+        int count = npcCountOverride > 0 ? npcCountOverride : GameSettings.InnocentCount;
         if (count <= 0) return;
         List<Vector2> spawns = NpcSpawnPositions(count);
         if (spawns.Count < count)

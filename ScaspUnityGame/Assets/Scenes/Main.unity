@@ -582,7 +582,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b6f8da5b778abcc45aee36a36ff5c885, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LeverManager
-  totalLevers: 2
+  totalLevers: 10
   winScreen: {fileID: 1884710366}
 --- !u!114 &190084543
 MonoBehaviour:
@@ -22248,10 +22248,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70f441913240a724eb3613fff4eca801, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerManager
+  npcCountOverride: 5
   spawnSpacing: 2
   spawnPosition: {x: 0, y: -2}
   decisionInterval: 1
-  decisionBackend: 0
+  decisionBackend: 1
   leverManager: {fileID: 190084542}
   scaspPolicy: 1
   explainScaspDecisions: 0

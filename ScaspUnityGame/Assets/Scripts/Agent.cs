@@ -4,7 +4,7 @@ public class Agent : Agent_Parent_Script
 {
     // Must equal bite_window_seconds/1 in half_zombie_timed_behavior.pl.
     // NpcState sends it and Python rejects half-zombie snapshots that disagree.
-    public const float BiteWindowSeconds = 30f;
+    public const float BiteWindowSeconds = 5f;
 
     [Header("Agent Properties")]
     [SerializeField] private int health = 3;

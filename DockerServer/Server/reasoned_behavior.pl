@@ -14,8 +14,8 @@ immediate_danger(Actor) :-
 
 % Keep these constants equal to half_zombie_timed_behavior.pl.
 % FactFactory validates the Unity timer using the baseline file.
-bite_window_seconds(30).
-critical_bite_seconds(15).
+bite_window_seconds(5).
+critical_bite_seconds(4).
 
 bite_time_remaining(Remaining, Actor) :-
     half_zombie(Actor),
