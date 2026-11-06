@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 
-public enum NpcDecisionBackend { BehaviorTree, Scasp }
+public enum NpcDecisionBackend { BehaviorTree, Scasp, ChatGPT }
 
 public class PlayerManager : MonoBehaviour
 {
@@ -135,6 +135,18 @@ public class PlayerManager : MonoBehaviour
                         StartCoroutine(RunNpcDecisionLoop(agent, null));
                     else 
                         Debug.LogWarning($"{actorId}: Missing ScaspStrategy or ScaspClient.", npc);
+                }
+                else if (decisionBackend == NpcDecisionBackend.ChatGPT)
+                {
+                    ChatGPTStrategy strategy = npc.GetComponent<ChatGPTStrategy>();
+
+                    if (strategy == null)
+                    {
+                        strategy = npc.AddComponent<ChatGPTStrategy>();
+                    }
+
+                    agent.SetStrategy(strategy, "ChatGPT");
+                    StartCoroutine(RunNpcDecisionLoop(agent, null));
                 }
                 else
                 {
