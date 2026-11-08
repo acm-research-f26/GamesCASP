@@ -49,7 +49,7 @@ public sealed class ExperimentRunner : MonoBehaviour
         catch (Exception exception)
         {
             Debug.LogException(exception);
-            if (Application.isBatchMode) Application.Quit(1);
+            ExitBatch(1);
         }
     }
 
@@ -100,11 +100,16 @@ public sealed class ExperimentRunner : MonoBehaviour
         RestoreGlobals();
         IsRunning = false;
         try { BatchFinished?.Invoke(this); }
+        catch (Exception exception)
+        {
+            Failure = exception.ToString();
+            Debug.LogException(exception);
+        }
         finally
         {
             Debug.Log($"[Experiment] {CompletedRuns}/{Settings.GameCount * 2} runs finished. " +
                 (Failure != null ? "Failed." : cancelRequested ? "Cancelled." : "Complete."));
-            if (Application.isBatchMode) Application.Quit(Failure != null ? 1 : cancelRequested ? 2 : 0);
+            ExitBatch(Failure != null ? 1 : cancelRequested ? 2 : 0);
             Destroy(gameObject);
         }
     }
@@ -123,6 +128,7 @@ public sealed class ExperimentRunner : MonoBehaviour
                 yield return LoadGameScene();
                 // Let Start (including the UI sliders) finish before applying settings.
                 yield return null;
+                if (cancelRequested) yield break;
                 Time.timeScale = 1f;
                 AiDiagnostics.Reset();
                 MansionNavigation.Clear();
@@ -184,6 +190,16 @@ public sealed class ExperimentRunner : MonoBehaviour
             new LoadSceneParameters(LoadSceneMode.Single));
 #else
         return SceneManager.LoadSceneAsync(ScenePath, LoadSceneMode.Single);
+#endif
+    }
+
+    private static void ExitBatch(int code)
+    {
+        if (!Application.isBatchMode) return;
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.Exit(code);
+#else
+        Application.Quit(code);
 #endif
     }
 

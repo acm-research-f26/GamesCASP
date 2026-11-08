@@ -9,6 +9,25 @@ public sealed class ExperimentWindow : EditorWindow
     [MenuItem("Tools/Experiments/Run Games")]
     public static void Open() => GetWindow<ExperimentWindow>("Game Experiments");
 
+    // Unity.exe -batchmode -executeMethod ExperimentWindow.RunBatch -experimentGames 100
+    // Do not pass -quit: the runner exits after writing the final CSVs.
+    public static void RunBatch()
+    {
+        try
+        {
+            string[] args = System.Environment.GetCommandLineArgs();
+            if (System.Array.IndexOf(args, "-experimentGames") < 0)
+                throw new System.ArgumentException("Specify -experimentGames for an unattended experiment.");
+            ExperimentSettings.FromArguments(args);
+            EditorApplication.EnterPlaymode();
+        }
+        catch (System.Exception exception)
+        {
+            Debug.LogException(exception);
+            EditorApplication.Exit(1);
+        }
+    }
+
     [InitializeOnLoadMethod]
     private static void RegisterPlayModeHook()
     {
