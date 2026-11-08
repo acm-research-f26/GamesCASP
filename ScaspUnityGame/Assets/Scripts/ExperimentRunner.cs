@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -19,6 +20,10 @@ public sealed class ExperimentRunner : MonoBehaviour
     public string BatchId { get; private set; }
     public string Failure { get; private set; }
     public ExperimentSettings Settings { get; private set; }
+    // A fresh object for each run. Measurement code fills these fields before
+    // RunFinished returns; unfilled values are explicitly exported as placeholders.
+    public ExperimentMetrics CurrentMetrics { get; private set; }
+    public string OutputDirectory { get; private set; }
 
     // Ready fires after fresh scene initialization, before any NPCs are spawned.
     public event Action<ExperimentRunner, PlayerManager> RunPreparing;
@@ -30,6 +35,7 @@ public sealed class ExperimentRunner : MonoBehaviour
     private bool cancelRequested;
     private float previousTimeScale;
     private UnityEngine.Random.State previousRandomState;
+    private ExperimentCsv csv;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetInstance() => Instance = null;
@@ -88,6 +94,7 @@ public sealed class ExperimentRunner : MonoBehaviour
             }
             yield return next;
         }
+        SaveSummary(Failure != null ? "failed" : cancelRequested ? "cancelled" : "completed");
         // Also tears down the final run's NPCs, sockets, and coroutines.
         yield return LoadGameScene();
         RestoreGlobals();
@@ -104,6 +111,11 @@ public sealed class ExperimentRunner : MonoBehaviour
 
     private IEnumerator RunGames()
     {
+        string root = string.IsNullOrWhiteSpace(Settings.OutputDirectory)
+            ? Path.Combine(Application.persistentDataPath, "Experiments") : Path.GetFullPath(Settings.OutputDirectory);
+        OutputDirectory = Path.Combine(root, BatchId);
+        csv = new ExperimentCsv(OutputDirectory, BatchId, Settings.GameCount, Settings.Backend.ToString(), Settings.Policy.ToString());
+        Debug.Log($"[Experiment] CSV output: {OutputDirectory}");
         for (int game = 1; game <= Settings.GameCount && !cancelRequested; game++)
         {
             for (int configuration = 1; configuration <= 2 && !cancelRequested; configuration++)
@@ -116,6 +128,7 @@ public sealed class ExperimentRunner : MonoBehaviour
                 MansionNavigation.Clear();
                 GameNumber = game;
                 Configuration = configuration;
+                CurrentMetrics = new ExperimentMetrics();
                 LayoutSeed = unchecked(Settings.Seed + game - 1);
                 UnityEngine.Random.InitState(LayoutSeed);
 
@@ -146,7 +159,9 @@ public sealed class ExperimentRunner : MonoBehaviour
                     yield return null;
                 if (cancelRequested) yield break;
 
-                RunFinished?.Invoke(this, outcome.Value, Time.realtimeSinceStartupAsDouble - started);
+                double seconds = Time.realtimeSinceStartupAsDouble - started;
+                RunFinished?.Invoke(this, outcome.Value, seconds);
+                csv.Append(game, configuration, LayoutSeed, outcome.Value.ToString(), seconds, CurrentMetrics);
                 CompletedRuns++;
             }
         }
@@ -183,7 +198,21 @@ public sealed class ExperimentRunner : MonoBehaviour
     private void OnDestroy()
     {
         if (Instance != this) return;
+        // Stopping Play Mode / closing the app still exports completed runs.
+        if (csv != null) SaveSummary("interrupted");
         RestoreGlobals();
         Instance = null;
+    }
+
+    private void SaveSummary(string status)
+    {
+        if (csv == null) return;
+        try { csv.WriteSummary(status); }
+        catch (Exception exception)
+        {
+            Failure = exception.ToString();
+            Debug.LogException(exception);
+        }
+        finally { csv.Dispose(); csv = null; }
     }
 }
