@@ -30,6 +30,18 @@ public class PlayerManager : MonoBehaviour
     public GameObject playerPrefab;
     public List<Agent> players = new List<Agent>();
     private bool gameStarted;
+    private string actorIdPrefix = "";
+
+    public void ConfigureExperiment(int count, NpcDecisionBackend backend, ScaspPolicy policy, string identityPrefix)
+    {
+        if (gameStarted) throw new System.InvalidOperationException("Configure before starting the game.");
+        if (count <= 0) throw new System.ArgumentOutOfRangeException(nameof(count));
+        ScaspFactPayload.ValidateAtom(identityPrefix + "player1", nameof(identityPrefix));
+        npcCountOverride = count;
+        decisionBackend = backend;
+        scaspPolicy = policy;
+        actorIdPrefix = identityPrefix;
+    }
 
     public NpcDecisionBackend DecisionBackend { get => decisionBackend; set { if (!gameStarted) decisionBackend = value; } }
     public ScaspPolicy ScaspDecisionPolicy { get => scaspPolicy; set { if (!gameStarted) scaspPolicy = value; } }
@@ -96,7 +108,7 @@ public class PlayerManager : MonoBehaviour
                 Vector2 position = spawns[i];
                 agent.Initialize("innocent", position.x, position.y);
                 // Assign each NPC a unique Prolog actor ID.
-                string actorId = $"player{i + 1}";
+                string actorId = $"{actorIdPrefix}player{i + 1}";
                 npc.name = actorId;
                 // Other agents see this NPC under the same ID, whichever backend controls it.
                 agent.SetAgentId(actorId);
