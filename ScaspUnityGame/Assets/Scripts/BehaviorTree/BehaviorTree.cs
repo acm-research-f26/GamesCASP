@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-// Plain C# strategy, one instance per agent. Do not attach it as a component.
+// One strategy component per agent.
 public sealed class BehaviorTree : MonoBehaviour, IAgentStrategy
 {
     private Agent owner;
@@ -29,6 +29,34 @@ public sealed class BehaviorTree : MonoBehaviour, IAgentStrategy
         LastDecision = ("", "");
     }
 
+    private void OnEnable()
+    {
+        var agent = GetComponent<Agent>();
+        if (agent != null)
+            agent.BecameHalfZombie += RecordInfection;
+    }
+
+    private void OnDisable()
+    {
+        var agent = GetComponent<Agent>();
+        if (agent != null)
+            agent.BecameHalfZombie -= RecordInfection;
+    }
+
+    private void RecordInfection(Agent agent)
+    {
+        if (agent == owner)
+            state?.RecordInfection(agent.BiteWindowStartedAt);
+    }
+
+    private void Update()
+    {
+        // The decision loop skips expired agents. Stop any outstanding tree command.
+        if (owner != null && owner.BiteWindowExpired && aiAction != null &&
+            !string.IsNullOrEmpty(aiAction.CurrentAction) && ReferenceEquals(owner.ActiveStrategy, this))
+            aiAction.StopAllActions();
+    }
+
     // Trees selected in the Inspector are not initialized by PlayerManager.
     private void EnsureInitialized()
     {
@@ -44,11 +72,16 @@ public sealed class BehaviorTree : MonoBehaviour, IAgentStrategy
         state.update(fact);
     }
 
-    public IReadOnlyList<Fact> FetchTransientFacts() => aiAction.FetchTransientFacts();
+    public IReadOnlyList<Fact> FetchTransientFacts()
+    {
+        EnsureInitialized();
+        return aiAction.FetchTransientFacts();
+    }
 
     // Select only. The returned decision stays in this strategy, not the blackboard.
     public (string action, string target) getNextAction()
     {
+        EnsureInitialized();
         state.RefreshPersistentState();
         state.RefreshSearchState(aiAction);
         try
@@ -78,7 +111,7 @@ public sealed class BehaviorTree : MonoBehaviour, IAgentStrategy
         {
             agent.ExecuteAction(decision.action, decision.target ?? "");
         }
-        else if (owner.Health <= 0)
+        else
         {
             // No eligible decision is different from wait, but old movement must stop.
             aiAction.StopAllActions();

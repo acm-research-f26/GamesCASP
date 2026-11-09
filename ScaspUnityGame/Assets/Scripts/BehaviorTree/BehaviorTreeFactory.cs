@@ -34,22 +34,15 @@ public static class BehaviorTreeFactory
         Node objectivePriority = new LastLeverCondition(
             normalPriorities, finalLeverBranch);
 
-        Node innocentTree = new CanActCondition(new NoEligibleAction(), objectivePriority);
         if (!halfZombieBehavior)
-            return innocentTree;
+            return new CanActCondition(new NoEligibleAction(), objectivePriority);
 
-        // Half zombie part, copied from the baseline rules in half_zombie_timed_behavior.pl
-        // In the critical stage only attack_human or move_to_human are allowed, with no target theres no action
+        Node socialOrObjectives = new KnownHalfZombieVisibleCondition(objectivePriority, new RunFromThreat());
         Node biteOrApproach = new HumanTargetVisibleCondition(
             new NoEligibleAction(), new WithinBiteRangeCondition(new MoveToHuman(), new AttackHuman()));
+        Node halfZombieStage = new CriticalBiteStageCondition(socialOrObjectives, biteOrApproach);
 
-        // Still needs health like every other action
-        Node criticalBranch = new CanActCondition(new NoEligibleAction(), biteOrApproach);
-
-        // Before the critical stage a half zombie just plays the normal innocent tree
-        Node halfZombieStage = new CriticalBiteStageCondition(innocentTree, criticalBranch);
-
-        // An expired bite window blocks every action
-        return new BiteWindowExpiredCondition(halfZombieStage, new NoEligibleAction());
+        Node livingTree = new CanActCondition(new NoEligibleAction(), halfZombieStage);
+        return new BiteWindowExpiredCondition(livingTree, new NoEligibleAction());
     }
 }
