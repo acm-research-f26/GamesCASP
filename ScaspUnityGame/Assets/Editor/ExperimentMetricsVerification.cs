@@ -166,6 +166,8 @@ public static class ExperimentMetricsVerification
     public static void Main(string[] args)
     {
         Run();
+        // Also run the part two recorder checks from the same script
+        ExperimentMeasurementsVerification.Run();
         if (args.Length == 2 && args[0] == "--example-output") WriteExample(args[1]);
     }
 #endif

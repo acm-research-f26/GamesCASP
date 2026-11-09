@@ -49,6 +49,14 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
     private bool sendingStoredFacts;
     private float nextFactRetryTime;
 
+    // Experiment recorder for the request we are waiting on, so its timing goes to the game that sent it
+    private ExperimentMeasurements requestRecorder;
+    // Memories copied over after a strategy switch, their Python write is not a new fact so it isnt timed
+    private readonly HashSet<Fact> restoredFacts = new HashSet<Fact>();
+
+    // PlayerManager turns this on while it copies an NPC's memories into this strategy
+    public bool RestoringMemories { get; set; }
+
     // Includes an in-flight fact until Python acknowledges persistence.
     public int PendingFactCount => storedFacts.Count;
     public string ActorId => actorId;
@@ -192,6 +200,8 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
 
         requestPending = true;
         requestStartTime = Time.realtimeSinceStartup;
+        // Store which game this request belongs to before sending it, null outside experiments
+        requestRecorder = ExperimentRunner.ActiveMeasurements;
         pendingRequestId = $"{actorId}-{++requestSequence}";
         pendingSignature = signature;
         Stats.Requests++;
@@ -233,6 +243,9 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
 
         ScaspFactPayload.ValidateAtom(actorId, nameof(actorId));
         ScaspFactPayload.FromFact(fact); // Reject invalid IDs before accepting a fact into the queue.
+        // Mark restored memories so we dont count them as new fact storage
+        if (RestoringMemories)
+            restoredFacts.Add(fact);
         storedFacts.Add(fact);
         // Newly observed memories can change a decision even if the physical snapshot does not.
         answeredSignature = "";
@@ -251,8 +264,15 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
             while (isActiveAndEnabled && client.IsConnected && storedFacts.Count > 0)
             {
                 // One at a time preserves the order of mutable updates and retries.
-                await client.StoreFactAsync(actorId, storedFacts[0]);
+                // Get the recorder now so a slow reply cant end up in the next game
+                ExperimentMeasurements recorder = ExperimentRunner.ActiveMeasurements;
+                float writeMs = await client.StoreFactAsync(actorId, storedFacts[0]);
                 Debug.Log($"{name}: Python stored {storedFacts[0].Type} for {actorId}: {storedFacts[0].SubjectId}", this);
+
+                // Save the Python file write time for new facts only, restored memories are skipped
+                // A missing write time comes back negative and the recorder throws it away
+                if (!restoredFacts.Remove(storedFacts[0]))
+                    recorder?.AddScaspFactLatency(writeMs);
                 storedFacts.RemoveAt(0);
             }
         }
@@ -291,6 +311,18 @@ public class ScaspStrategy : MonoBehaviour, IAgentStrategy
         stats.Responses++;
         stats.RoundTripMs.Add(roundTrip * 1000f);
         stats.SolverMs.Add(reply.SolverMs);
+
+        // Make sure this result belongs to the game that sent the request, a finished game ignores it
+        // Only the reply matching the pending request gets here, so each request counts once
+        // This is the time to get a reply back, not a count of executed actions
+        // A reply older than maxResponseAge still counts here since it really took that long, but it gets discarded below and never executed
+        // Errors, timeouts and replies to abandoned requests never get here, so they are never counted
+        if (requestRecorder != null)
+        {
+            requestRecorder.AddScaspRoundTripLatency(roundTrip * 1000.0);
+            requestRecorder.AddScaspQueryLatency(reply.SolverMs);
+            requestRecorder = null;
+        }
 
         if (roundTrip > maxResponseAge)
         {

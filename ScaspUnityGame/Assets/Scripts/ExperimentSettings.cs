@@ -10,7 +10,9 @@ public sealed class ExperimentSettings
     // Real seconds: a stalled simulation must not hold up the entire batch.
     public float MaxGameSeconds = 120f;
     public NpcDecisionBackend Backend = NpcDecisionBackend.BehaviorTree;
-    public ScaspPolicy Policy = ScaspPolicy.Reasoned;
+    // Part two, experiments use Baseline since the half zombie Behavior Tree copies the Baseline rules
+    // Reasoned can still be picked in the window or with -scaspPolicy Reasoned, normal gameplay keeps its own default
+    public ScaspPolicy Policy = ScaspPolicy.Baseline;
     public string OutputDirectory = "";
 
     public void Validate()

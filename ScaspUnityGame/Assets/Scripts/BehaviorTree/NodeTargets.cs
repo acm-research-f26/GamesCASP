@@ -26,6 +26,26 @@ public static class NodeTargets
         return preferred;
     }
 
+    // Get the closest valid human target, same as preferred_human_target in half_zombie_rules.pl
+    // human_target needs a visible human that isnt us, has health above 0 and a distance of 0 or more
+    // preferred means no other target is strictly closer, so on a tie we keep the first one we saw
+    // s(CASP) gets the humans in this same order and Python takes its first model, so ties should match too
+    public static Fact PreferredHuman(Blackboard state)
+    {
+        Fact preferred = null;
+        foreach (Fact human in state.visibleHumans)
+        {
+            // Skip anything we cant use and never target ourselves
+            if (!HasUsableDistanceAndId(human) || human.SubjectId == state.OwnerId) continue;
+            // Dead humans are not targets
+            if (!human.Health.HasValue || human.Health.Value <= 0) continue;
+
+            if (preferred == null || human.Distance.Value < preferred.Distance.Value)
+                preferred = human;
+        }
+        return preferred;
+    }
+
     private static bool HasUsableDistanceAndId(Fact fact) =>
         fact != null && !string.IsNullOrWhiteSpace(fact.SubjectId) &&
         fact.Distance.HasValue && fact.Distance.Value >= 0f &&

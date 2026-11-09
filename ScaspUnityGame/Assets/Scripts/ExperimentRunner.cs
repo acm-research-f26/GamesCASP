@@ -23,6 +23,11 @@ public sealed class ExperimentRunner : MonoBehaviour
     // A fresh object for each run. Measurement code fills these fields before
     // RunFinished returns; unfilled values are explicitly exported as placeholders.
     public ExperimentMetrics CurrentMetrics { get; private set; }
+    // Part two, the real samples for this run, a fresh one every run just like CurrentMetrics
+    public ExperimentMeasurements CurrentMeasurements { get; private set; }
+    // The recorder gameplay code should use right now, null in normal gameplay so nothing gets recorded
+    public static ExperimentMeasurements ActiveMeasurements =>
+        Instance != null && Instance.IsRunning ? Instance.CurrentMeasurements : null;
     public string OutputDirectory { get; private set; }
 
     // Ready fires after fresh scene initialization, before any NPCs are spawned.
@@ -68,6 +73,12 @@ public sealed class ExperimentRunner : MonoBehaviour
         runner.previousTimeScale = Time.timeScale;
         runner.previousRandomState = UnityEngine.Random.state;
         runner.IsRunning = true;
+        // Part two, give each role its strategy for this configuration before the NPCs spawn
+        runner.RunPreparing += (run, players) => players.ConfigureRoleStrategies(
+            ExperimentRoleStrategies.InnocentStrategy(run.Configuration),
+            ExperimentRoleStrategies.HalfZombieStrategy(run.Configuration));
+        // Part two, record roles and survival for each run and fill CurrentMetrics before the CSV export
+        ExperimentRecording.Attach(runner);
         runner.StartCoroutine(runner.Guard(runner.RunGames()));
         return runner;
     }
@@ -119,7 +130,8 @@ public sealed class ExperimentRunner : MonoBehaviour
         string root = string.IsNullOrWhiteSpace(Settings.OutputDirectory)
             ? Path.Combine(Application.persistentDataPath, "Experiments") : Path.GetFullPath(Settings.OutputDirectory);
         OutputDirectory = Path.Combine(root, BatchId);
-        csv = new ExperimentCsv(OutputDirectory, BatchId, Settings.GameCount, Settings.Backend.ToString(), Settings.Policy.ToString());
+        // Part two, the window Backend is not used anymore, so write the backends the roles really use
+        csv = new ExperimentCsv(OutputDirectory, BatchId, Settings.GameCount, ExperimentRoleStrategies.BackendLabel, Settings.Policy.ToString());
         Debug.Log($"[Experiment] CSV output: {OutputDirectory}");
         for (int game = 1; game <= Settings.GameCount && !cancelRequested; game++)
         {
@@ -135,6 +147,7 @@ public sealed class ExperimentRunner : MonoBehaviour
                 GameNumber = game;
                 Configuration = configuration;
                 CurrentMetrics = new ExperimentMetrics();
+                CurrentMeasurements = new ExperimentMeasurements();
                 LayoutSeed = unchecked(Settings.Seed + game - 1);
                 UnityEngine.Random.InitState(LayoutSeed);
 

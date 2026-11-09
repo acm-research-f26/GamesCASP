@@ -19,6 +19,9 @@ $project = @"
     <Compile Include="../../Assets/Scripts/ExperimentMetrics.cs" />
     <Compile Include="../../Assets/Scripts/ExperimentCsv.cs" />
     <Compile Include="../../Assets/Editor/ExperimentMetricsVerification.cs" />
+    <Compile Include="../../Assets/Scripts/ExperimentMeasurements.cs" />
+    <Compile Include="../../Assets/Scripts/ExperimentRoleStrategies.cs" />
+    <Compile Include="../../Assets/Editor/ExperimentMeasurementsVerification.cs" />
   </ItemGroup>
 </Project>
 "@
