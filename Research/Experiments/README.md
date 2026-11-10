@@ -39,6 +39,14 @@ The issue repeats the same role mapping for configurations 1 and 2; this branch
 does not resolve that typo or implement the deferred strategy swap. CSVs explicitly
 mark `role_mapping=pending`.
 
+**Part two update:** the strategy swap is now implemented, so the paragraph above
+describes part one only. Configuration 1 runs innocents on s(CASP) and half-zombies
+on the Behavior Tree, configuration 2 swaps them, and the window's Backend choice is
+not used for experiment runs. Both configurations therefore need the Python server
+running, even though step 2 above says BehaviorTree does not. `role_mapping` now says
+`innocent:scasp/half_zombie:behavior_tree` or `innocent:behavior_tree/half_zombie:scasp`
+(`both_configurations` on the summary `all` row). See "Part two measurements" below.
+
 Each run gives every actor a batch/game/configuration-specific Prolog identity.
 Python selects memories by actor, so old games cannot leak stored knowledge into
 new games, even if a previous request finishes late. Existing server files are
@@ -148,3 +156,35 @@ use `-executeMethod ExperimentLoopVerification.RunBatch` without `-quit` or
 Implementation validation: 68 standalone CSV checks passed and all C# sources
 compiled against Unity assemblies. The real scene-loop verifier could not be
 executed in this environment because Unity reported no valid Editor license.
+
+## Part two measurements
+
+`ExperimentRecording` fills `CurrentMetrics` from a fresh `ExperimentMeasurements`
+recorder every run. Samples are only kept for the run that started them, and a
+finished run rejects anything that arrives later. Empty categories stay blank.
+
+- s(CASP) fact: Python's `write_ms`, the fact file update itself after the lock is taken.
+  Lock waiting and the network are not included.
+- s(CASP) round trip: from just before Unity sends the decision request until Unity
+  handles the matching reply (this includes up to one frame of queue time). It is
+  reply latency, not executed actions: a reply older than `maxResponseAge` (3 s) is
+  counted because it really took that long, then discarded and never executed.
+  Errors, timeouts and replies to abandoned requests are never counted.
+- s(CASP) query: Python's `solver_ms`, the solver process run only (including starting
+  the `scasp` process), without the websocket transport.
+- Behavior Tree fact: the strategy's `StoreFact` call inside `TryStoreFact`, which is
+  the blackboard update.
+- Behavior Tree action: the existing decision-loop timing around `RequestDecision`
+  (the same value as `AiDiagnostics.DecisionMs`), which includes handing the chosen
+  action to `AiAction`.
+- CSV metadata: `backend` is `scasp_and_behavior_tree` for every experiment, `role_mapping`
+  says which role used which, and `scasp_policy` is the one policy the whole batch used.
+  Experiments default to **Baseline**; a Reasoned batch must be run and kept as its own
+  batch, so a summary never mixes policies.
+- Memories replayed after an infection switch are never counted as fact latency.
+- Innocents survive if alive and never infected. Half-zombies survive if alive with an
+  open bite window; an expired window is a loss. This is role survival, not the match winner.
+
+Verifiers: **Verify Measurements** (also in `Verify-Experiments.ps1`), **Verify Strategy
+Switching**, and **Verify Live Experiment (needs server)**, which runs a real 2-game batch
+against the server started with `./Start-Playtest.ps1 -NoUnity`.

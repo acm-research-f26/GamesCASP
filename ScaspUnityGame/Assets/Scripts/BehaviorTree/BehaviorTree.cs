@@ -14,7 +14,8 @@ public sealed class BehaviorTree : MonoBehaviour, IAgentStrategy
     public Blackboard State => state;
     public (string action, string target) LastDecision { get; private set; }
 
-    public void SetInitialValues(AiAction aiAction, LeverManager leverManager)
+    // halfZombieBehavior adds the half zombie branch, PlayerManager only turns it on in experiments
+    public void SetInitialValues(AiAction aiAction, LeverManager leverManager, bool halfZombieBehavior = false)
     {
         if (aiAction == null) throw new ArgumentNullException(nameof(aiAction));
         if (leverManager == null) throw new ArgumentNullException(nameof(leverManager));
@@ -24,7 +25,7 @@ public sealed class BehaviorTree : MonoBehaviour, IAgentStrategy
 
         state = new Blackboard(owner, leverManager);
         state.RefreshSearchState(aiAction);
-        root = BehaviorTreeFactory.Build(barricades);
+        root = BehaviorTreeFactory.Build(barricades, halfZombieBehavior);
         LastDecision = ("", "");
     }
 

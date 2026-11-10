@@ -63,7 +63,7 @@ public sealed class ExperimentWindow : EditorWindow
         settings.Backend = (NpcDecisionBackend)EditorGUILayout.EnumPopup("Backend", settings.Backend);
         settings.Policy = (ScaspPolicy)EditorGUILayout.EnumPopup("s(CASP) policy", settings.Policy);
         settings.OutputDirectory = EditorGUILayout.TextField("Output directory (optional)", settings.OutputDirectory);
-        EditorGUILayout.HelpBox("Each game runs twice with the same layout seed. Metrics are placeholders; role-based strategy switching is pending (#55).", MessageType.Info);
+        EditorGUILayout.HelpBox("Each game runs twice with the same layout seed. Configuration 1 runs innocents on s(CASP) and half-zombies on the Behavior Tree, configuration 2 swaps them, so Backend is not used here. The s(CASP) server must be running (#55).", MessageType.Info);
         if (!GUILayout.Button("Run experiments")) return;
         try
         {

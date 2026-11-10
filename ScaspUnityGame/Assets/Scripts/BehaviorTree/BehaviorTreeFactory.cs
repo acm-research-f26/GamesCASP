@@ -2,7 +2,8 @@ using System;
 
 public static class BehaviorTreeFactory
 {
-    public static Node Build(BarricadeObservationBuffer barricades)
+    // halfZombieBehavior is only turned on for experiments so normal gameplay keeps the same tree
+    public static Node Build(BarricadeObservationBuffer barricades, bool halfZombieBehavior = false)
     {
         if (barricades == null) throw new ArgumentNullException(nameof(barricades));
 
@@ -33,6 +34,22 @@ public static class BehaviorTreeFactory
         Node objectivePriority = new LastLeverCondition(
             normalPriorities, finalLeverBranch);
 
-        return new CanActCondition(new NoEligibleAction(), objectivePriority);
+        Node innocentTree = new CanActCondition(new NoEligibleAction(), objectivePriority);
+        if (!halfZombieBehavior)
+            return innocentTree;
+
+        // Half zombie part, copied from the baseline rules in half_zombie_timed_behavior.pl
+        // In the critical stage only attack_human or move_to_human are allowed, with no target theres no action
+        Node biteOrApproach = new HumanTargetVisibleCondition(
+            new NoEligibleAction(), new WithinBiteRangeCondition(new MoveToHuman(), new AttackHuman()));
+
+        // Still needs health like every other action
+        Node criticalBranch = new CanActCondition(new NoEligibleAction(), biteOrApproach);
+
+        // Before the critical stage a half zombie just plays the normal innocent tree
+        Node halfZombieStage = new CriticalBiteStageCondition(innocentTree, criticalBranch);
+
+        // An expired bite window blocks every action
+        return new BiteWindowExpiredCondition(halfZombieStage, new NoEligibleAction());
     }
 }

@@ -23,8 +23,9 @@ public class ScaspClient : MonoBehaviour
     private ClientWebSocket socket;
     private CancellationTokenSource lifetime;
     private readonly SemaphoreSlim sendLock = new SemaphoreSlim(1, 1);
-    private readonly Dictionary<string, TaskCompletionSource<bool>> pendingFactWrites =
-        new Dictionary<string, TaskCompletionSource<bool>>();
+    // Each pending write finishes with the Python file write time in ms
+    private readonly Dictionary<string, TaskCompletionSource<float>> pendingFactWrites =
+        new Dictionary<string, TaskCompletionSource<float>>();
 
     // Queue responses for processing on Unity's main thread
     private readonly ConcurrentQueue<string> responseQueue = new ConcurrentQueue<string>();
@@ -83,6 +84,8 @@ public class ScaspClient : MonoBehaviour
         public float explain_ms;
         public string justification;
         public string[] rejected;
+        // Python's fact file write time, -1 means the reply didnt have it so it wont be counted
+        public float write_ms = -1f;
     }
 
     // Reconnects with backoff until the component is destroyed, so a server that
@@ -170,7 +173,8 @@ public class ScaspClient : MonoBehaviour
     }
 
     // Completion means Python acknowledged the file write, not just a socket send.
-    public async Task StoreFactAsync(string actor, Fact fact)
+    // Returns Python's write time in ms, or a negative number if Python didnt send one
+    public async Task<float> StoreFactAsync(string actor, Fact fact)
     {
         ScaspFactPayload.ValidateAtom(actor, nameof(actor));
         ScaspFactPayload payload = ScaspFactPayload.FromFact(fact);
@@ -178,7 +182,7 @@ public class ScaspClient : MonoBehaviour
             throw new InvalidOperationException("s(CASP) is not connected.");
 
         string requestId = Guid.NewGuid().ToString("N");
-        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var completion = new TaskCompletionSource<float>(TaskCreationOptions.RunContinuationsAsynchronously);
         pendingFactWrites.Add(requestId, completion);
         try
         {
@@ -197,7 +201,7 @@ public class ScaspClient : MonoBehaviour
                 timeout.Cancel();
                 if (finished != completion.Task)
                     throw new TimeoutException("Python did not acknowledge fact storage before the timeout.");
-                await completion.Task;
+                return await completion.Task;
             }
         }
         finally
@@ -296,7 +300,7 @@ public class ScaspClient : MonoBehaviour
             {
                 if (!string.IsNullOrEmpty(response.request_id) &&
                     pendingFactWrites.TryGetValue(response.request_id, out var completedWrite))
-                    completedWrite.TrySetResult(true);
+                    completedWrite.TrySetResult(response.write_ms);
             }
             else if (response.message_type == "possible_actions" && response.possible_actions != null)
             {

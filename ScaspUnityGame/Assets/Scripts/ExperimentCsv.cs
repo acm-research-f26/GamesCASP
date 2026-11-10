@@ -58,7 +58,7 @@ public sealed class ExperimentCsv : IDisposable
         metrics.Validate();
         var snapshot = metrics.Copy();
         var row = new List<object> { batchId, game, configuration, seed, backend, policy,
-            "pending", outcome, seconds, Status(new[] { snapshot }) };
+            RoleMapping(configuration), outcome, seconds, Status(new[] { snapshot }) };
         foreach (var latency in Latencies) row.Add(latency(snapshot));
         foreach (var population in Populations)
         {
@@ -88,7 +88,7 @@ public sealed class ExperimentCsv : IDisposable
                 var data = runs.Where(run => configuration == 0 || run.Configuration == configuration).Select(run => run.Metrics).ToArray();
                 var row = new List<object> { batchId, batchStatus, requestedGames, requestedGames * 2,
                     configuration == 0 ? "all" : configuration.ToString(CultureInfo.InvariantCulture),
-                    data.Length, backend, policy, "pending", Status(data) };
+                    data.Length, backend, policy, RoleMapping(configuration), Status(data) };
                 foreach (var latency in Latencies) row.Add(Mean(data.Select(latency)));
                 foreach (var population in Populations)
                 {
@@ -117,6 +117,19 @@ public sealed class ExperimentCsv : IDisposable
     }
 
     public static double WinPercentage(long alive, long total) => total == 0 ? 0 : 100.0 * alive / total;
+
+    // Part two, the strategy each role used in this configuration, 0 is the summary row for both
+    public static string RoleMapping(int configuration)
+    {
+        if (configuration == 0)
+            return "both_configurations";
+        return $"innocent:{StrategyName(ExperimentRoleStrategies.InnocentStrategy(configuration))}" +
+            $"/half_zombie:{StrategyName(ExperimentRoleStrategies.HalfZombieStrategy(configuration))}";
+    }
+
+    // Same names the rest of the CSV uses for each strategy
+    private static string StrategyName(ExperimentStrategy strategy) =>
+        strategy == ExperimentStrategy.Scasp ? "scasp" : "behavior_tree";
 
     private static IEnumerable<string> MetricHeaders()
     {

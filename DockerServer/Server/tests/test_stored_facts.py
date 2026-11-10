@@ -45,6 +45,10 @@ class StoredFactTests(unittest.IsolatedAsyncioTestCase):
         for _ in range(2):
             async with websockets.connect(self.uri) as socket:
                 reply = await self.send(socket, [self.fact(), self.fact()])
+                # The write time is measured, so just check its a real nonnegative number
+                write_ms = reply.pop("write_ms")
+                self.assertIsInstance(write_ms, (int, float))
+                self.assertGreaterEqual(write_ms, 0)
                 self.assertEqual(reply, dict(
                     message_type="facts_stored", actor="player1", request_id="test-request"
                 ))
@@ -97,6 +101,8 @@ class StoredFactTests(unittest.IsolatedAsyncioTestCase):
                 with self.assertLogs("SocketHandler", level="ERROR"):
                     reply = await self.send(socket, [self.fact()])
             self.assertEqual(reply["error"], "processing_failed")
+            # A failed write should never report a latency sample
+            self.assertNotIn("write_ms", reply)
             self.assertEqual(reply["request_id"], "test-request")
             self.assertEqual(self.file.read_text(), "baseline.\n")
             self.assertFalse(self.file.with_suffix(".pl.tmp").exists())

@@ -20,6 +20,15 @@ public class Blackboard
     public float visionRadius = 5f;
     public int totalLevers;
     public int activatedLevers;
+    // Humans this NPC can see right now, cleared after every decision like the zombies
+    // These are the same HumanSeen observations s(CASP) gets, they never say who is infected
+    public List<Fact> visibleHumans = new List<Fact>();
+
+    // The owner's own id and bite timer, read live so they are never stale
+    // An NPC knows its own infection, same as half_zombie(Actor) in the s(CASP) snapshot
+    public string OwnerId => owner.AgentId;
+    public bool InCriticalBiteStage => owner.InCriticalBiteStage;
+    public bool BiteWindowExpired => owner.BiteWindowExpired;
 
     public Blackboard(Agent owner, LeverManager leverManager)
     {
@@ -106,6 +115,10 @@ public class Blackboard
                     (!closestZombieDistance.HasValue || fact.Distance.Value < closestZombieDistance.Value))
                     closestZombieDistance = fact.Distance;
             }
+
+            // Keep the visible humans so a half zombie tree can pick a target
+            if (fact.Type == FactType.HumanSeen)
+                visibleHumans.Add(fact);
         }
     }
 
@@ -113,6 +126,7 @@ public class Blackboard
     {
         visibleLevers.Clear();
         visibleZombies.Clear();
+        visibleHumans.Clear();
         canSeeLever = false;
         canSeeBarricade = false;
         numZombiesNearby = 0;

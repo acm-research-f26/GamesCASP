@@ -346,7 +346,10 @@ class UnityStoredFactsRequest(UnityRequest):
         # Validate the whole batch before touching the file.
         facts = [StoredFact.from_payload(actor, payload) for payload in payloads]
         async with self.ctx["facts_lock"]:
+            # Time only the file write, not the wait for the lock, for the experiment fact latency
+            write_started = time.perf_counter()
             update_stored_facts(self.ctx["facts_temp_file"], facts)
+            write_ms = (time.perf_counter() - write_started) * 1000
 
         for fact in facts:
             logger.info("Stored fact: %s", fact.to_prolog().strip())
@@ -356,4 +359,6 @@ class UnityStoredFactsRequest(UnityRequest):
                 "message_type": "facts_stored",
                 "request_id": request_id,
                 "actor": actor,
+                # Send the write time back so Unity can save it with the game results
+                "write_ms": round(write_ms, 3),
             }))
