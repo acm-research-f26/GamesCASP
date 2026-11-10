@@ -38,6 +38,7 @@ public class Agent : Agent_Parent_Script
     // This lets the experiment know when the NPC just got infected so it can change strategy
     // It only fires once per NPC since MarkHalfZombie ignores NPCs that are already infected
     public event System.Action<Agent> BecameHalfZombie;
+    public string statName;
 
     // Initialize this NPC with its role and starting position.
     public void Initialize(string agentRole, float startPosX, float startPosY)

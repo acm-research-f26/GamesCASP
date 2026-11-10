@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 
-public enum NpcDecisionBackend { BehaviorTree, Scasp }
+public enum NpcDecisionBackend { BehaviorTree, Scasp, ChatGPT }
 
 public class PlayerManager : MonoBehaviour
 {
@@ -195,6 +195,18 @@ public class PlayerManager : MonoBehaviour
                     else 
                         Debug.LogWarning($"{actorId}: Missing ScaspStrategy or ScaspClient.", npc);
                 }
+                else if (decisionBackend == NpcDecisionBackend.ChatGPT)
+                {
+                    ChatGPTStrategy strategy = npc.GetComponent<ChatGPTStrategy>();
+
+                    if (strategy == null)
+                    {
+                        strategy = npc.AddComponent<ChatGPTStrategy>();
+                    }
+
+                    agent.SetStrategy(strategy, "ChatGPT");
+                    StartCoroutine(RunNpcDecisionLoop(agent, null));
+                }
                 else
                 {
                     ScaspStrategy strategy = npc.GetComponent<ScaspStrategy>();
@@ -319,7 +331,7 @@ public class PlayerManager : MonoBehaviour
     {
         // Let all Start-button handlers finish map/progress initialization first.
         yield return null;
-        bool usesScasp = client != null;
+        bool usesScasp = agent.stratName == "scasp";
         var stats = AiDiagnostics.For(agent.name);
         var clock = new System.Diagnostics.Stopwatch();
         while (agent != null)
@@ -339,8 +351,7 @@ public class PlayerManager : MonoBehaviour
                 // Behavior Tree decisions are synchronous: time them in-process.
                 clock.Restart();
                 agent.RequestDecision();
-                if (!usesScasp)
-                {
+                if (agent.stratName == "behavior_tree")
                     stats.DecisionMs.Add((float)clock.Elapsed.TotalMilliseconds);
                     // Here we record the decision time for this NPC, same timing point as the diagnostics above
                     ExperimentRunner.ActiveMeasurements?.AddBehaviorTreeActionLatency(clock.Elapsed.TotalMilliseconds);
