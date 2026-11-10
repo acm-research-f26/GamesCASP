@@ -10,7 +10,7 @@ public class ChatGPTStrategy : MonoBehaviour, IAgentStrategy
 {
     private bool waitingForReply;
     private float nextRequestTime;
-    private const string ApiKey = "put api key here";
+    private string ApiKey = "null";
 
     private static readonly HttpClient Client = new HttpClient {Timeout = TimeSpan.FromSeconds(10)};
     private List<Fact> memories = new List<Fact>();
@@ -36,7 +36,13 @@ public class ChatGPTStrategy : MonoBehaviour, IAgentStrategy
     
     Return only one JSON object containing action and target as strings.
     Example: {""action"":""hunt_lever"",""target"":""""}
-";
+    ";
+
+    void Start()
+    {
+        EnvLoader.Load();
+        ApiKey = EnvLoader.Get("GPT_KEY");
+    }
 
     public void StoreFact(Fact fact)
     {
@@ -56,6 +62,9 @@ public class ChatGPTStrategy : MonoBehaviour, IAgentStrategy
 
         try
         {
+            var stats = AiDiagnostics.For(agent.name);
+            stats.Requests++;
+            float requestStartTime = Time.realtimeSinceStartup;
             Agent npc = agent.GetComponent<Agent>();
             AiAction actions = agent.GetComponent<AiAction>();
             LeverManager levers = FindAnyObjectByType<LeverManager>();
@@ -119,6 +128,7 @@ public class ChatGPTStrategy : MonoBehaviour, IAgentStrategy
             JObject decision = JObject.Parse(decisionJson);
 
             Debug.Log($"{agent.name} ChatGPT reply: {decisionJson}", this);
+            float roundTrip = Time.realtimeSinceStartup - requestStartTime;
 
             string action = (string)decision["action"];
             string target = (string)decision["target"] ?? "";
@@ -127,6 +137,8 @@ public class ChatGPTStrategy : MonoBehaviour, IAgentStrategy
                 isActiveAndEnabled &&
                 ReferenceEquals(agent.ActiveStrategy, this))
             {
+                stats.Responses++;
+                stats.RoundTripMs.Add(roundTrip * 1000f);
                 agent.ExecuteAction(action, target);
             }
         }

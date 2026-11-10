@@ -22,7 +22,10 @@ public class AiStatusOverlay : MonoBehaviour
         if (players.GameStarted)
             return;
         if (keyboard.bKey.wasPressedThisFrame)
-            players.DecisionBackend = players.DecisionBackend == NpcDecisionBackend.Scasp ? NpcDecisionBackend.BehaviorTree : NpcDecisionBackend.Scasp;
+            players.DecisionBackend = players.DecisionBackend == NpcDecisionBackend.Scasp ? 
+                NpcDecisionBackend.BehaviorTree : players.DecisionBackend == NpcDecisionBackend.BehaviorTree ?
+                NpcDecisionBackend.ChatGPT :
+                NpcDecisionBackend.Scasp;
         if (keyboard.pKey.wasPressedThisFrame)
             players.ScaspDecisionPolicy = players.ScaspDecisionPolicy == ScaspPolicy.Reasoned ? ScaspPolicy.Baseline : ScaspPolicy.Reasoned;
     }
@@ -35,7 +38,9 @@ public class AiStatusOverlay : MonoBehaviour
 
         string backend = players.DecisionBackend == NpcDecisionBackend.Scasp
             ? $"<b>s(CASP)</b> · {players.ScaspDecisionPolicy} policy"
-            : "<b>Behavior Tree</b>";
+            : players.DecisionBackend == NpcDecisionBackend.BehaviorTree ? 
+            "<b>Behavior Tree</b>" 
+            : "<b>ChatGPT</b>";
         string text;
         if (!players.GameStarted)
         {
@@ -56,9 +61,13 @@ public class AiStatusOverlay : MonoBehaviour
                     string link = strategy != null && strategy.IsConnected ? "<color=#7f7>connected</color>" : "<color=#f77>NOT CONNECTED</color>";
                     detail = $"{link} · {stats.Responses}/{stats.Requests} answered · {AiDiagnostics.Percentile(stats.RoundTripMs, 0.5f):F0} ms";
                 }
-                else
+                else if(players.DecisionBackend == NpcDecisionBackend.BehaviorTree)
                 {
                     detail = $"{stats.DecisionMs.Count} decisions · {AiDiagnostics.Percentile(stats.DecisionMs, 0.5f):F2} ms";
+                }
+                else
+                {
+                    detail = $"{stats.Responses}/{stats.Requests} answered · {AiDiagnostics.Percentile(stats.RoundTripMs, 0.5f):F0} ms";
                 }
                 text += $"\n{agent.name} ({agent.Health} hp): {detail} · {stats.LastAction}";
             }

@@ -268,7 +268,7 @@ public class PlayerManager : MonoBehaviour
     {
         // Let all Start-button handlers finish map/progress initialization first.
         yield return null;
-        bool usesScasp = client != null;
+        bool usesScasp = agent.stratName == "scasp";
         var stats = AiDiagnostics.For(agent.name);
         var clock = new System.Diagnostics.Stopwatch();
         while (agent != null)
@@ -280,7 +280,7 @@ public class PlayerManager : MonoBehaviour
                 // Behavior Tree decisions are synchronous: time them in-process.
                 clock.Restart();
                 agent.RequestDecision();
-                if (!usesScasp)
+                if (agent.stratName == "behavior_tree")
                     stats.DecisionMs.Add((float)clock.Elapsed.TotalMilliseconds);
             }
 

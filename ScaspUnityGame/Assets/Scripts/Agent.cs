@@ -27,6 +27,8 @@ public class Agent : Agent_Parent_Script
     public float BiteWindowStartedAt => biteWindowStartedAt;
     public bool BiteWindowExpired => isHalfZombie && Time.time >= biteWindowStartedAt + BiteWindowSeconds;
 
+    public string statName;
+
     // Initialize this NPC with its role and starting position.
     public void Initialize(string agentRole, float startPosX, float startPosY)
     {
