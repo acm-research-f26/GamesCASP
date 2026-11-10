@@ -11,23 +11,30 @@ public sealed class ExperimentMetrics
     public double? BehaviorTreeFactLatencyMs;
     public double? BehaviorTreeActionLatencyMs;
 
+    public double? LlmLatencyMs;
+
     public ExperimentPopulation ScaspInnocents;
     public ExperimentPopulation ScaspHalfZombies;
     public ExperimentPopulation BehaviorTreeInnocents;
     public ExperimentPopulation BehaviorTreeHalfZombies;
+    public ExperimentPopulation LlmInnocents;
+    public ExperimentPopulation LlmHalfZombies;
 
     public ExperimentMetrics Copy() => (ExperimentMetrics)MemberwiseClone();
 
     public void Validate()
     {
         foreach (double? latency in new[] { ScaspFactLatencyMs, ScaspActionRoundTripLatencyMs,
-            ScaspActionQueryLatencyMs, BehaviorTreeFactLatencyMs, BehaviorTreeActionLatencyMs })
+            ScaspActionQueryLatencyMs, BehaviorTreeFactLatencyMs, BehaviorTreeActionLatencyMs,
+            LlmLatencyMs })
             if (latency.HasValue && (double.IsNaN(latency.Value) || double.IsInfinity(latency.Value) || latency < 0))
                 throw new ArgumentException("Latency must be missing or a finite, nonnegative number.");
         ScaspInnocents.Validate();
         ScaspHalfZombies.Validate();
         BehaviorTreeInnocents.Validate();
         BehaviorTreeHalfZombies.Validate();
+        LlmInnocents.Validate();
+        LlmHalfZombies.Validate();
     }
 }
 

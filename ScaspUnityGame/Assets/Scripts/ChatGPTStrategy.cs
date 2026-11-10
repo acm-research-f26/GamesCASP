@@ -140,6 +140,7 @@ public class ChatGPTStrategy : MonoBehaviour, IAgentStrategy
                 stats.Responses++;
                 stats.RoundTripMs.Add(roundTrip * 1000f);
                 agent.ExecuteAction(action, target);
+                ExperimentRunner.ActiveMeasurements?.AddLlmActionLatency(roundTrip);
             }
         }
         catch (Exception error)

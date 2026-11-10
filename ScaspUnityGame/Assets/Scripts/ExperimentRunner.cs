@@ -135,7 +135,7 @@ public sealed class ExperimentRunner : MonoBehaviour
         Debug.Log($"[Experiment] CSV output: {OutputDirectory}");
         for (int game = 1; game <= Settings.GameCount && !cancelRequested; game++)
         {
-            for (int configuration = 1; configuration <= 2 && !cancelRequested; configuration++)
+            for (int configuration = 1; configuration <= ExperimentCsv.CONFIG_COUNT && !cancelRequested; configuration++)
             {
                 yield return LoadGameScene();
                 // Let Start (including the UI sliders) finish before applying settings.

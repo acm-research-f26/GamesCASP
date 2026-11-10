@@ -44,6 +44,7 @@ public static class ExperimentRecording
     {
         if (strategy is ScaspStrategy) return ExperimentStrategy.Scasp;
         if (strategy is BehaviorTree) return ExperimentStrategy.BehaviorTree;
+        if (strategy is ChatGPTStrategy) return ExperimentStrategy.ChatGPT;
         return null;
     }
 

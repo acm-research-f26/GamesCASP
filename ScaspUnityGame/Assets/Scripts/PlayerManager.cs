@@ -72,7 +72,7 @@ public class PlayerManager : MonoBehaviour
 
     // Turn the experiment strategy into the backend PlayerManager already uses
     private static NpcDecisionBackend ToBackend(ExperimentStrategy strategy) =>
-        strategy == ExperimentStrategy.Scasp ? NpcDecisionBackend.Scasp : NpcDecisionBackend.BehaviorTree;
+        strategy == ExperimentStrategy.Scasp ? NpcDecisionBackend.Scasp : strategy == ExperimentStrategy.BehaviorTree ? NpcDecisionBackend.BehaviorTree : NpcDecisionBackend.ChatGPT;
 
     public NpcDecisionBackend DecisionBackend { get => decisionBackend; set { if (!gameStarted) decisionBackend = value; } }
     public ScaspPolicy ScaspDecisionPolicy { get => scaspPolicy; set { if (!gameStarted) scaspPolicy = value; } }

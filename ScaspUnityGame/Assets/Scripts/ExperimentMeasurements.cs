@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 
 // Which backend was controlling an NPC while it had a role
-public enum ExperimentStrategy { Scasp, BehaviorTree }
+public enum ExperimentStrategy { Scasp, BehaviorTree, ChatGPT }
 
 // The two roles we keep track of for the experiment results
 public enum ExperimentRole { Innocent, HalfZombie }
@@ -37,6 +37,8 @@ public sealed class ExperimentMeasurements
     private readonly List<double> behaviorTreeFactMs = new List<double>();
     private readonly List<double> behaviorTreeActionMs = new List<double>();
 
+    private readonly List<double> llmActionMs = new List<double>();
+
     // The NPC ids that were ever in each strategy and role
     // We use sets so the same NPC never gets counted twice
     private readonly Dictionary<(ExperimentStrategy, ExperimentRole), HashSet<string>> members =
@@ -53,12 +55,15 @@ public sealed class ExperimentMeasurements
     public int BehaviorTreeFactSampleCount => behaviorTreeFactMs.Count;
     public int BehaviorTreeActionSampleCount => behaviorTreeActionMs.Count;
 
+    public int LlmActionSampleCount => llmActionMs.Count;
+
     // Each of these returns false when the sample was thrown away
     public bool AddScaspFactLatency(double ms) => AddSample(scaspFactMs, ms);
     public bool AddScaspRoundTripLatency(double ms) => AddSample(scaspRoundTripMs, ms);
     public bool AddScaspQueryLatency(double ms) => AddSample(scaspQueryMs, ms);
     public bool AddBehaviorTreeFactLatency(double ms) => AddSample(behaviorTreeFactMs, ms);
     public bool AddBehaviorTreeActionLatency(double ms) => AddSample(behaviorTreeActionMs, ms);
+    public bool AddLlmActionLatency(double ms) => AddSample(llmActionMs, ms);
 
     // Only keep real measurements, a bad number means something went wrong so we skip it
     // Dont count this if the game already ended
@@ -118,12 +123,16 @@ public sealed class ExperimentMeasurements
         metrics.BehaviorTreeFactLatencyMs = Average(behaviorTreeFactMs);
         metrics.BehaviorTreeActionLatencyMs = Average(behaviorTreeActionMs);
 
+        metrics.LlmLatencyMs = Average(llmActionMs);
+
         // Save T(i) and A(i) for every strategy and role
         // A count of 0 here is real, it just means nobody had that role this run
         metrics.ScaspInnocents = Population(ExperimentStrategy.Scasp, ExperimentRole.Innocent, finalStates);
         metrics.ScaspHalfZombies = Population(ExperimentStrategy.Scasp, ExperimentRole.HalfZombie, finalStates);
         metrics.BehaviorTreeInnocents = Population(ExperimentStrategy.BehaviorTree, ExperimentRole.Innocent, finalStates);
         metrics.BehaviorTreeHalfZombies = Population(ExperimentStrategy.BehaviorTree, ExperimentRole.HalfZombie, finalStates);
+        metrics.LlmInnocents = Population(ExperimentStrategy.ChatGPT, ExperimentRole.Innocent, finalStates);
+        metrics.LlmHalfZombies = Population(ExperimentStrategy.ChatGPT, ExperimentRole.HalfZombie, finalStates);
 
         // The run is over, so lock it so late results cant change anything
         IsFinished = true;

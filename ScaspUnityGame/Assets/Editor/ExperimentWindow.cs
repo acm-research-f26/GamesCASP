@@ -56,7 +56,7 @@ public sealed class ExperimentWindow : EditorWindow
             Repaint();
             return;
         }
-        settings.GameCount = EditorGUILayout.IntField("Games (two runs each)", settings.GameCount);
+        settings.GameCount = EditorGUILayout.IntField("Games (six runs each)", settings.GameCount);
         settings.NpcCount = EditorGUILayout.IntField("NPCs", settings.NpcCount);
         settings.Seed = EditorGUILayout.IntField("Starting layout seed", settings.Seed);
         settings.MaxGameSeconds = EditorGUILayout.FloatField("Time limit (real seconds)", settings.MaxGameSeconds);

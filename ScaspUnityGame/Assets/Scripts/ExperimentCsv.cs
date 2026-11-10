@@ -8,19 +8,26 @@ using System.Text;
 // Pure C#: export and aggregation can be verified without starting Unity or Python.
 public sealed class ExperimentCsv : IDisposable
 {
+    public const int CONFIG_COUNT = 6;
+    
     private static readonly string[] LatencyNames = {
         "scasp_fact_latency_ms", "scasp_action_round_trip_latency_ms", "scasp_action_query_latency_ms",
-        "behavior_tree_fact_latency_ms", "behavior_tree_action_latency_ms"
+        "behavior_tree_fact_latency_ms", "behavior_tree_action_latency_ms",
+        "llm_latency_ms"
     };
     private static readonly Func<ExperimentMetrics, double?>[] Latencies = {
         m => m.ScaspFactLatencyMs, m => m.ScaspActionRoundTripLatencyMs, m => m.ScaspActionQueryLatencyMs,
-        m => m.BehaviorTreeFactLatencyMs, m => m.BehaviorTreeActionLatencyMs
+        m => m.BehaviorTreeFactLatencyMs, m => m.BehaviorTreeActionLatencyMs, m => m.LlmLatencyMs
     };
     private static readonly string[] PopulationNames = {
-        "scasp_innocents", "scasp_half_zombies", "behavior_tree_innocents", "behavior_tree_half_zombies"
+        "scasp_innocents", "scasp_half_zombies", 
+        "behavior_tree_innocents", "behavior_tree_half_zombies",
+        "llm_innocents", "llm_half_zombies"
+
     };
     private static readonly Func<ExperimentMetrics, ExperimentPopulation>[] Populations = {
-        m => m.ScaspInnocents, m => m.ScaspHalfZombies, m => m.BehaviorTreeInnocents, m => m.BehaviorTreeHalfZombies
+        m => m.ScaspInnocents, m => m.ScaspHalfZombies, m => m.BehaviorTreeInnocents, m => m.BehaviorTreeHalfZombies,
+        m => m.LlmInnocents, m=> m.LlmHalfZombies
     };
 
     private readonly string batchId, backend, policy;
@@ -32,7 +39,7 @@ public sealed class ExperimentCsv : IDisposable
 
     public ExperimentCsv(string directory, string batchId, int requestedGames, string backend, string policy)
     {
-        if (requestedGames <= 0 || requestedGames > int.MaxValue / 2)
+        if (requestedGames <= 0 || requestedGames > int.MaxValue / CONFIG_COUNT)
             throw new ArgumentOutOfRangeException(nameof(requestedGames));
         this.batchId = batchId;
         this.backend = backend;
@@ -50,7 +57,7 @@ public sealed class ExperimentCsv : IDisposable
 
     public void Append(int game, int configuration, int seed, string outcome, double seconds, ExperimentMetrics metrics)
     {
-        if (game != runs.Count / 2 + 1 || configuration != runs.Count % 2 + 1 || game > requestedGames)
+        if (game != runs.Count / CONFIG_COUNT + 1 || configuration != runs.Count % CONFIG_COUNT + 1 || game > requestedGames)
             throw new ArgumentException("Runs must be appended once in game/configuration order.");
         if (metrics == null) throw new ArgumentNullException(nameof(metrics));
         if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds < 0)
@@ -58,7 +65,7 @@ public sealed class ExperimentCsv : IDisposable
         metrics.Validate();
         var snapshot = metrics.Copy();
         var row = new List<object> { batchId, game, configuration, seed, backend, policy,
-            RoleMapping(configuration), outcome, seconds, Status(new[] { snapshot }) };
+            RoleMapping(configuration), outcome, seconds, Status(configuration, snapshot)};
         foreach (var latency in Latencies) row.Add(latency(snapshot));
         foreach (var population in Populations)
         {
@@ -83,12 +90,13 @@ public sealed class ExperimentCsv : IDisposable
             header.AddRange(PopulationNames.Select(name => name + "_measured_runs"));
             WriteRow(writer, header.ToArray());
             // Keep paired configurations independently available as well as the combined result.
-            foreach (int configuration in new[] { 1, 2, 0 })
+            foreach (int configuration in Enumerable.Range(1, 6).Append(0))
             {
-                var data = runs.Where(run => configuration == 0 || run.Configuration == configuration).Select(run => run.Metrics).ToArray();
-                var row = new List<object> { batchId, batchStatus, requestedGames, requestedGames * 2,
+                var group = runs.Where(run => configuration == 0 || run.Configuration == configuration).ToArray();
+                var data = group.Select(run => run.Metrics).ToArray();
+                var row = new List<object> { batchId, batchStatus, requestedGames, requestedGames * CONFIG_COUNT,
                     configuration == 0 ? "all" : configuration.ToString(CultureInfo.InvariantCulture),
-                    data.Length, backend, policy, RoleMapping(configuration), Status(data) };
+                    data.Length, backend, policy, RoleMapping(configuration), Status(group) };
                 foreach (var latency in Latencies) row.Add(Mean(data.Select(latency)));
                 foreach (var population in Populations)
                 {
@@ -129,7 +137,7 @@ public sealed class ExperimentCsv : IDisposable
 
     // Same names the rest of the CSV uses for each strategy
     private static string StrategyName(ExperimentStrategy strategy) =>
-        strategy == ExperimentStrategy.Scasp ? "scasp" : "behavior_tree";
+        strategy == ExperimentStrategy.Scasp ? "scasp" : strategy == ExperimentStrategy.BehaviorTree ? "behavior_tree" : "ChatGPT";
 
     private static IEnumerable<string> MetricHeaders()
     {
@@ -141,14 +149,25 @@ public sealed class ExperimentCsv : IDisposable
             yield return name + "_win_percentage";
         }
     }
-
-    private static string Status(ExperimentMetrics[] values)
+    private static int ExpectedLatencies(int configuration)
     {
-        int present = values.Sum(value => Latencies.Count(select => select(value).HasValue) +
-            Populations.Count(select => select(value).Total.HasValue));
-        return present == 0 ? "placeholder" : present == values.Length * 9 ? "measured" : "partial";
+        int Count(ExperimentStrategy s) => s == ExperimentStrategy.Scasp ? 3 : s == ExperimentStrategy.BehaviorTree ? 2 : 1;
+        return Count(ExperimentRoleStrategies.InnocentStrategy(configuration)) +
+            Count(ExperimentRoleStrategies.HalfZombieStrategy(configuration));
     }
 
+    private static string Status(int configuration, ExperimentMetrics m)
+    {
+        int present = Latencies.Count(select => select(m).HasValue);
+        return present == 0 ? "placeholder" : present == ExpectedLatencies(configuration) ? "measured" : "partial";
+    }
+    
+    private static string Status(IEnumerable<(int Configuration, ExperimentMetrics Metrics)> group)
+    {
+        var statuses = group.Select(run => Status(run.Configuration, run.Metrics)).ToArray();
+        if (statuses.Length == 0 || statuses.All(s => s == "placeholder")) return "placeholder";
+        return statuses.All(s => s == "measured") ? "measured" : "partial";
+    }
     private static void WriteRow(TextWriter writer, params object[] values)
     {
         writer.WriteLine(string.Join(",", values.Select(value =>
