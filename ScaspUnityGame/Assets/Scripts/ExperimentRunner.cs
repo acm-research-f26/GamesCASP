@@ -128,7 +128,7 @@ public sealed class ExperimentRunner : MonoBehaviour
     private IEnumerator RunGames()
     {
         string root = string.IsNullOrWhiteSpace(Settings.OutputDirectory)
-            ? Path.Combine(Application.persistentDataPath, "Experiments") : Path.GetFullPath(Settings.OutputDirectory);
+            ? Path.Combine(Directory.GetCurrentDirectory(), "Experiments") : Path.GetFullPath(Settings.OutputDirectory);
         OutputDirectory = Path.Combine(root, BatchId);
         // Part two, the window Backend is not used anymore, so write the backends the roles really use
         csv = new ExperimentCsv(OutputDirectory, BatchId, Settings.GameCount, ExperimentRoleStrategies.BackendLabel, Settings.Policy.ToString());

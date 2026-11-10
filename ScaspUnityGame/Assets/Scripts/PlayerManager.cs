@@ -352,6 +352,7 @@ public class PlayerManager : MonoBehaviour
                 clock.Restart();
                 agent.RequestDecision();
                 if (agent.stratName == "behavior_tree")
+                {
                     stats.DecisionMs.Add((float)clock.Elapsed.TotalMilliseconds);
                     // Here we record the decision time for this NPC, same timing point as the diagnostics above
                     ExperimentRunner.ActiveMeasurements?.AddBehaviorTreeActionLatency(clock.Elapsed.TotalMilliseconds);
@@ -491,5 +492,4 @@ public class PlayerManager : MonoBehaviour
                 Debug.Log("[AI] Status\n" + AiDiagnostics.Summary(), this);
         }
     }
-
 }
