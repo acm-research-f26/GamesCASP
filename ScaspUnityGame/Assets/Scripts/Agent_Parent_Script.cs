@@ -113,7 +113,16 @@ public class Agent_Parent_Script : MonoBehaviour
         if (strategy == null)
             return false;
 
+        // In experiments we time how long the tree takes to store a new fact
+        // s(CASP) gets its fact time from Python instead, and replayed memories never come through here
+        var recorder = strategy is BehaviorTree ? ExperimentRunner.ActiveMeasurements : null;
+        var clock = recorder != null ? System.Diagnostics.Stopwatch.StartNew() : null;
+
         strategy.StoreFact(fact);
+
+        // Save how long it took, we only get here if storing worked
+        if (recorder != null)
+            recorder.AddBehaviorTreeFactLatency(clock.Elapsed.TotalMilliseconds);
         return true;
     }
 

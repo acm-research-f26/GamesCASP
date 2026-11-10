@@ -2,7 +2,8 @@ using System;
 
 public static class BehaviorTreeFactory
 {
-    public static Node Build(BarricadeObservationBuffer barricades)
+    // halfZombieBehavior is only turned on for experiments so normal gameplay keeps the same tree
+    public static Node Build(BarricadeObservationBuffer barricades, bool halfZombieBehavior = false)
     {
         if (barricades == null) throw new ArgumentNullException(nameof(barricades));
 
@@ -33,6 +34,15 @@ public static class BehaviorTreeFactory
         Node objectivePriority = new LastLeverCondition(
             normalPriorities, finalLeverBranch);
 
-        return new CanActCondition(new NoEligibleAction(), objectivePriority);
+        if (!halfZombieBehavior)
+            return new CanActCondition(new NoEligibleAction(), objectivePriority);
+
+        Node socialOrObjectives = new KnownHalfZombieVisibleCondition(objectivePriority, new RunFromThreat());
+        Node biteOrApproach = new HumanTargetVisibleCondition(
+            new NoEligibleAction(), new WithinBiteRangeCondition(new MoveToHuman(), new AttackHuman()));
+        Node halfZombieStage = new CriticalBiteStageCondition(socialOrObjectives, biteOrApproach);
+
+        Node livingTree = new CanActCondition(new NoEligibleAction(), halfZombieStage);
+        return new BiteWindowExpiredCondition(livingTree, new NoEligibleAction());
     }
 }

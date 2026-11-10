@@ -20,11 +20,54 @@ public class Blackboard
     public float visionRadius = 5f;
     public int totalLevers;
     public int activatedLevers;
+    // Humans this NPC can see right now, cleared after every decision like the zombies
+    // These are the same HumanSeen observations s(CASP) gets, they never say who is infected
+    public List<Fact> visibleHumans = new List<Fact>();
+
+    private readonly Dictionary<string, BlackboardPlayer> playerKnowledge =
+        new Dictionary<string, BlackboardPlayer>(StringComparer.Ordinal);
+
+    public IReadOnlyDictionary<string, BlackboardPlayer> PlayerKnowledge { get; }
+    public string OwnerId => owner.AgentId;
+    public bool HalfZombie { get; private set; }
+    public float? FirstInfectedAt { get; private set; }
+    public float? BiteWindowStartedAt { get; private set; }
+    public float CurrentTime { get; private set; }
+    public float SecondsSinceBite { get; private set; }
+    public float TimeRemaining { get; private set; }
+    public float BiteRange { get; private set; } = 1f;
+    public bool BiteWindowExpired => HalfZombie && TimeRemaining <= 0f;
+    public bool InCriticalBiteStage { get; private set; }
+
+    public bool KnowsHalfZombie(string id) =>
+        id != null && playerKnowledge.TryGetValue(id, out var player) && player.KnownHalfZombie;
+
+    internal void RecordInfection(float startedAt)
+    {
+        FirstInfectedAt = startedAt;
+    }
+
+    private BlackboardPlayer RememberPlayer(string id)
+    {
+        if (!playerKnowledge.TryGetValue(id, out var player))
+        {
+            player = new BlackboardPlayer(id);
+            playerKnowledge.Add(id, player);
+        }
+        return player;
+    }
+
+    private void Learn(string id, InfectionEvidence evidence)
+    {
+        if (!string.IsNullOrWhiteSpace(id) && id != OwnerId)
+            RememberPlayer(id).Observe(evidence);
+    }
 
     public Blackboard(Agent owner, LeverManager leverManager)
     {
         this.owner = owner ?? throw new ArgumentNullException(nameof(owner));
         this.leverManager = leverManager ?? throw new ArgumentNullException(nameof(leverManager));
+        PlayerKnowledge = new System.Collections.ObjectModel.ReadOnlyDictionary<string, BlackboardPlayer>(playerKnowledge);
         RefreshPersistentState();
     }
 
@@ -35,11 +78,34 @@ public class Blackboard
         totalLevers = leverManager.TotalLevers;
         activatedLevers = leverManager.ActivatedLevers;
         lastLever = totalLevers - activatedLevers == 1;
+        CurrentTime = UnityEngine.Time.time;
+        HalfZombie = owner.IsHalfZombie;
+        InCriticalBiteStage = owner.InCriticalBiteStage;
+        BiteWindowStartedAt = HalfZombie ? (float?)owner.BiteWindowStartedAt : null;
+
+        if (BiteWindowStartedAt.HasValue)
+        {
+            // A tree created during the role switch can read the initial start from the Agent.
+            // Later renewals update the current window without overwriting that first observation.
+            float startedAt = BiteWindowStartedAt.Value;
+            if (!FirstInfectedAt.HasValue)
+                RecordInfection(startedAt);
+
+            SecondsSinceBite = Math.Max(0f, CurrentTime - startedAt);
+            TimeRemaining = Math.Max(0f, startedAt + Agent.BiteWindowSeconds - CurrentTime);
+        }
+        else
+        {
+            FirstInfectedAt = null;
+            SecondsSinceBite = 0f;
+            TimeRemaining = 0f;
+        }
     }
 
     public void RefreshSearchState(AiAction executor)
     {
         visionRadius = executor.detectionRange;
+        BiteRange = executor.interactionRange;
         searchingForLever = executor.IsSearchingForLever;
         searchingForBarricade = executor.IsSearchingForBarricade;
     }
@@ -49,6 +115,16 @@ public class Blackboard
         if (fact == null) throw new ArgumentNullException(nameof(fact));
         if (fact.Lifetime == FactLifetime.Transient)
             throw new ArgumentException("Transient facts must be fetched, not stored.", nameof(fact));
+
+        if (fact.Type == FactType.ZombieAttackWitnessed)
+            Learn(fact.TargetId, InfectionEvidence.ZombieAttack);
+        if (fact.Type == FactType.BiteAttemptWitnessed)
+            Learn(fact.SubjectId, InfectionEvidence.BiteAttempt);
+        if (fact.Type == FactType.BiteWitnessed)
+        {
+            Learn(fact.SubjectId, InfectionEvidence.ConfirmedBiter);
+            Learn(fact.TargetId, InfectionEvidence.ConfirmedVictim);
+        }
 
         if (fact.Type == FactType.LeverActivated)
         {
@@ -106,6 +182,14 @@ public class Blackboard
                     (!closestZombieDistance.HasValue || fact.Distance.Value < closestZombieDistance.Value))
                     closestZombieDistance = fact.Distance;
             }
+
+            // Keep the visible humans so a half zombie tree can pick a target
+            if (fact.Type == FactType.HumanSeen)
+            {
+                visibleHumans.Add(fact);
+                if (!string.IsNullOrWhiteSpace(fact.SubjectId) && fact.SubjectId != OwnerId)
+                    RememberPlayer(fact.SubjectId);
+            }
         }
     }
 
@@ -113,6 +197,7 @@ public class Blackboard
     {
         visibleLevers.Clear();
         visibleZombies.Clear();
+        visibleHumans.Clear();
         canSeeLever = false;
         canSeeBarricade = false;
         numZombiesNearby = 0;

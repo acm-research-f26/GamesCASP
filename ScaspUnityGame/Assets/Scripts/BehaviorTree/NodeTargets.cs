@@ -26,6 +26,42 @@ public static class NodeTargets
         return preferred;
     }
 
+    // Pick the nearest living person the observer has no evidence is infected.
+    // Keep the first observed target when two distances are equal.
+    public static Fact PreferredHuman(Blackboard state)
+    {
+        Fact preferred = null;
+        foreach (Fact human in state.visibleHumans)
+        {
+            // Skip anything we cant use and never target ourselves
+            if (!HasUsableDistanceAndId(human) || human.SubjectId == state.OwnerId) continue;
+            // Dead humans are not targets
+            if (!human.Health.HasValue || human.Health.Value <= 0 || state.KnowsHalfZombie(human.SubjectId))
+                continue;
+
+            if (preferred == null || human.Distance.Value < preferred.Distance.Value)
+                preferred = human;
+        }
+        return preferred;
+    }
+
+    public static Fact KnownHalfZombieThreat(Blackboard state)
+    {
+        if (state.HalfZombie) return null;
+
+        Fact preferred = null;
+        foreach (Fact human in state.visibleHumans)
+        {
+            if (!HasUsableDistanceAndId(human) || (human.Health ?? 0) <= 0 ||
+                human.Distance.Value > state.visionRadius || !state.KnowsHalfZombie(human.SubjectId))
+                continue;
+
+            if (preferred == null || human.Distance.Value < preferred.Distance.Value)
+                preferred = human;
+        }
+        return preferred;
+    }
+
     private static bool HasUsableDistanceAndId(Fact fact) =>
         fact != null && !string.IsNullOrWhiteSpace(fact.SubjectId) &&
         fact.Distance.HasValue && fact.Distance.Value >= 0f &&

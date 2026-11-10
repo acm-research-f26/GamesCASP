@@ -30,6 +30,49 @@ public class PlayerManager : MonoBehaviour
     public GameObject playerPrefab;
     public List<Agent> players = new List<Agent>();
     private bool gameStarted;
+    private string actorIdPrefix = "";
+
+    public void ConfigureExperiment(int count, NpcDecisionBackend backend, ScaspPolicy policy, string identityPrefix)
+    {
+        if (gameStarted) throw new System.InvalidOperationException("Configure before starting the game.");
+        if (count <= 0) throw new System.ArgumentOutOfRangeException(nameof(count));
+        ScaspFactPayload.ValidateAtom(identityPrefix + "player1", nameof(identityPrefix));
+        npcCountOverride = count;
+        decisionBackend = backend;
+        scaspPolicy = policy;
+        actorIdPrefix = identityPrefix;
+    }
+
+    // Experiment only, which backend each role uses, off in normal gameplay
+    private bool usesRoleStrategies;
+    private NpcDecisionBackend innocentBackend;
+    private NpcDecisionBackend halfZombieBackend;
+
+    // The stored facts each NPC learned, so they keep them after switching strategy
+    private readonly Dictionary<Agent, NpcFactMemory> factMemories = new Dictionary<Agent, NpcFactMemory>();
+
+    public bool UsesRoleStrategies => usesRoleStrategies;
+
+    // Get what this NPC remembers, or null outside of experiments
+    public NpcFactMemory FactMemoryFor(Agent agent) =>
+        agent != null && factMemories.TryGetValue(agent, out NpcFactMemory memory) ? memory : null;
+    public NpcDecisionBackend InnocentBackend => innocentBackend;
+    public NpcDecisionBackend HalfZombieBackend => halfZombieBackend;
+
+    // The experiment runner calls this before the NPCs spawn to pick a strategy for each role
+    public void ConfigureRoleStrategies(ExperimentStrategy innocent, ExperimentStrategy halfZombie)
+    {
+        if (gameStarted) throw new System.InvalidOperationException("Configure before starting the game.");
+        usesRoleStrategies = true;
+        innocentBackend = ToBackend(innocent);
+        halfZombieBackend = ToBackend(halfZombie);
+        // Every NPC spawns innocent, so the spawn code below just uses the innocent backend
+        decisionBackend = innocentBackend;
+    }
+
+    // Turn the experiment strategy into the backend PlayerManager already uses
+    private static NpcDecisionBackend ToBackend(ExperimentStrategy strategy) =>
+        strategy == ExperimentStrategy.Scasp ? NpcDecisionBackend.Scasp : NpcDecisionBackend.BehaviorTree;
 
     public NpcDecisionBackend DecisionBackend { get => decisionBackend; set { if (!gameStarted) decisionBackend = value; } }
     public ScaspPolicy ScaspDecisionPolicy { get => scaspPolicy; set { if (!gameStarted) scaspPolicy = value; } }
@@ -64,7 +107,8 @@ public class PlayerManager : MonoBehaviour
             return;
         }
         if (leverManager == null) leverManager = FindAnyObjectByType<LeverManager>();
-        if (decisionBackend == NpcDecisionBackend.BehaviorTree && leverManager == null)
+        // With role strategies any NPC can end up on a tree, so we always need the lever manager then
+        if ((decisionBackend == NpcDecisionBackend.BehaviorTree || usesRoleStrategies) && leverManager == null)
         {
             Debug.LogError("Assign the map's LeverManager before spawning tree agents.", this);
             return;
@@ -81,6 +125,9 @@ public class PlayerManager : MonoBehaviour
         AiDiagnostics.Log(decisionBackend == NpcDecisionBackend.Scasp
             ? $"AI backend for this run: s(CASP), {scaspPolicy} policy, {count} NPCs, explanations {(explainScaspDecisions ? "on" : "off")}, unchanged-skip {scaspUnchangedSkip} s"
             : $"AI backend for this run: Behavior Tree, {count} NPCs (s(CASP) not used)", this);
+        // Also say which backend each role gets so the experiment logs are clear
+        if (usesRoleStrategies)
+            AiDiagnostics.Log($"Experiment role strategies: innocents {innocentBackend}, half-zombies {halfZombieBackend}", this);
         StartCoroutine(ReportAiStatus());
 
         // The inactive parent prevents prefab clients from connecting before we select a backend.
@@ -96,7 +143,7 @@ public class PlayerManager : MonoBehaviour
                 Vector2 position = spawns[i];
                 agent.Initialize("innocent", position.x, position.y);
                 // Assign each NPC a unique Prolog actor ID.
-                string actorId = $"player{i + 1}";
+                string actorId = $"{actorIdPrefix}player{i + 1}";
                 npc.name = actorId;
                 // Other agents see this NPC under the same ID, whichever backend controls it.
                 agent.SetAgentId(actorId);
@@ -124,12 +171,24 @@ public class PlayerManager : MonoBehaviour
                     tree.enabled = true;
                     agent.SetStrategy(tree, "behavior_tree");
 
-                    tree.SetInitialValues(agent.GetComponent<AiAction>(), leverManager);
+                    // Experiments also get the half zombie branch, normal games keep the old tree
+                    tree.SetInitialValues(agent.GetComponent<AiAction>(), leverManager, usesRoleStrategies);
 
                     var treeStats = AiDiagnostics.For(actorId);
                     treeStats.Backend = "behavior_tree";
                     agent.GetComponent<AiAction>().ActionExecuted += (action, target) => { treeStats.Executed++; treeStats.CountAction(action); };
                     AiDiagnostics.Log($"{actorId}: strategy BehaviorTree", npc);
+
+                    // In experiments we connect the s(CASP) client now so its ready if this NPC changes role
+                    // The ScaspStrategy stays disabled, so only the tree can decide anything
+                    if (usesRoleStrategies)
+                    {
+                        client = npc.GetComponent<ScaspClient>();
+                        if (client != null)
+                            client.enabled = true;
+                        else
+                            Debug.LogWarning($"{actorId}: Missing ScaspClient, this NPC cant switch to s(CASP).", npc);
+                    }
 
                     if (tree != null)
                         StartCoroutine(RunNpcDecisionLoop(agent, null));
@@ -168,6 +227,10 @@ public class PlayerManager : MonoBehaviour
                 }
 
                 players.Add(agent);
+
+                // In experiments we watch for infection so the NPC can switch strategy
+                if (usesRoleStrategies)
+                    WatchForRoleChange(agent);
 
                 Debug.Log($"Spawned innocent NPC: {actorId} at {position}", npc);
 
@@ -273,6 +336,14 @@ public class PlayerManager : MonoBehaviour
         var clock = new System.Diagnostics.Stopwatch();
         while (agent != null)
         {
+            // In experiments the strategy can change mid game, so follow whichever one is active right now
+            // Normal gameplay skips this and keeps the strategy it spawned with
+            if (usesRoleStrategies)
+            {
+                usesScasp = agent.ActiveStrategy is ScaspStrategy;
+                client = usesScasp ? agent.GetComponent<ScaspClient>() : null;
+            }
+
             // A transformed half-zombie belongs to the gameplay mechanic, not the AI.
             if (agent.isActiveAndEnabled && agent.Health > 0 && !agent.BiteWindowExpired &&
                 (!usesScasp || (client != null && client.IsConnected)))
@@ -282,12 +353,132 @@ public class PlayerManager : MonoBehaviour
                 agent.RequestDecision();
                 if (agent.stratName == "behavior_tree")
                     stats.DecisionMs.Add((float)clock.Elapsed.TotalMilliseconds);
+                    // Here we record the decision time for this NPC, same timing point as the diagnostics above
+                    ExperimentRunner.ActiveMeasurements?.AddBehaviorTreeActionLatency(clock.Elapsed.TotalMilliseconds);
+                }
             }
 
             // ScaspStrategy coalesces requests while a previous decision is pending.
             // Game-time waits also pause with Time.timeScale.
             yield return new WaitForSeconds(Mathf.Max(0.1f, decisionInterval));
         }
+    }
+
+    // Start remembering this NPC's stored facts and listen for when it gets infected
+    private void WatchForRoleChange(Agent agent)
+    {
+        var memory = new NpcFactMemory();
+        factMemories[agent] = memory;
+
+        // Keep each fact after the active strategy stores it, this only fires when storing worked
+        AgentFactReceiver receiver = agent.GetComponent<AgentFactReceiver>();
+        if (receiver != null)
+            receiver.FactReceived += fact => memory.Remember(fact, agent.ActiveStrategy);
+        else
+            Debug.LogWarning($"{agent.AgentId}: Missing AgentFactReceiver, its memories cant follow a strategy switch.", agent);
+
+        agent.BecameHalfZombie += SwitchToHalfZombieStrategy;
+    }
+
+    // Here we update the strategy after the NPC gets infected
+    private void SwitchToHalfZombieStrategy(Agent agent)
+    {
+        // Catch everything here, a problem switching should never break the infection itself
+        try
+        {
+            if (!usesRoleStrategies || agent == null || agent.Health <= 0)
+                return;
+
+            // Here we check if the NPC is already on the half zombie backend, then theres nothing to switch
+            bool alreadyScasp = agent.ActiveStrategy is ScaspStrategy;
+            if (alreadyScasp == (halfZombieBackend == NpcDecisionBackend.Scasp))
+                return;
+
+            // Get the strategy for the new role
+            IAgentStrategy next = PrepareStrategy(agent, halfZombieBackend);
+            if (next == null)
+                return;
+
+            // SetStrategy turns off every other strategy, so the old one cant execute another action
+            // Turning off ScaspStrategy also drops its pending request, so a late reply gets ignored
+            string strategyName = halfZombieBackend == NpcDecisionBackend.Scasp ? "scasp" : "behavior_tree";
+            agent.SetStrategy(next, strategyName);
+            if (halfZombieBackend == NpcDecisionBackend.BehaviorTree)
+                AiDiagnostics.For(agent.AgentId).Backend = "behavior_tree";
+
+            // Make sure the NPC stops following the old strategy's last movement command
+            // StopAllActions only clears the action and movement target, physics like knockback is left alone
+            AiAction actions = agent.GetComponent<AiAction>();
+            if (actions != null)
+                actions.StopAllActions();
+
+            // Keep the facts this NPC already learned
+            // Facts go straight to the strategy, not through TryStoreFact, so they dont count as new facts
+            int replayed = 0;
+            NpcFactMemory memory = FactMemoryFor(agent);
+            // s(CASP) marks these as restored so the Python write isnt counted as fact latency
+            ScaspStrategy restoring = next as ScaspStrategy;
+            if (restoring != null)
+                restoring.RestoringMemories = true;
+            try
+            {
+                if (memory != null)
+                    replayed = memory.ReplayInto(next, (fact, exception) =>
+                        Debug.LogWarning($"{agent.AgentId}: Could not carry over {fact.Type} for {fact.SubjectId}: {exception.Message}", agent));
+            }
+            finally
+            {
+                if (restoring != null)
+                    restoring.RestoringMemories = false;
+            }
+
+            // Now we can start making decisions with the new strategy right away instead of standing still
+            // A tree decides now, s(CASP) just queues it and still waits for the facts above to be stored
+            // After this the decision loop already running for this NPC keeps going with the new strategy
+            agent.RequestDecision();
+
+            AiDiagnostics.Log($"{agent.AgentId}: infected, switched to {halfZombieBackend} with {replayed} remembered facts", agent);
+        }
+        catch (System.Exception exception)
+        {
+            Debug.LogException(exception, agent);
+        }
+    }
+
+    // Get the strategy component for a backend and set it up, reusing what the prefab already has
+    private IAgentStrategy PrepareStrategy(Agent agent, NpcDecisionBackend backend)
+    {
+        GameObject npc = agent.gameObject;
+        if (backend == NpcDecisionBackend.BehaviorTree)
+        {
+            BehaviorTree tree = npc.GetComponent<BehaviorTree>();
+            if (tree == null)
+                tree = npc.AddComponent<BehaviorTree>();
+
+            // A fresh tree setup, its transient observations get refreshed on its first decision
+            // We only get here in experiments, so it gets the half zombie branch
+            tree.SetInitialValues(agent.GetComponent<AiAction>(), leverManager, true);
+            return tree;
+        }
+
+        // The client was already connected at spawn, so we use that same socket and dont open another one
+        ScaspClient client = npc.GetComponent<ScaspClient>();
+        if (client == null)
+        {
+            Debug.LogWarning($"{agent.AgentId}: Missing ScaspClient, staying on the current strategy.", npc);
+            return null;
+        }
+
+        ScaspStrategy strategy = npc.GetComponent<ScaspStrategy>();
+        if (strategy == null)
+            strategy = npc.AddComponent<ScaspStrategy>();
+
+        // Same setup the spawn code does, so this NPC keeps the same Prolog identity
+        strategy.SetActorId(agent.AgentId);
+        strategy.Configure(scaspPolicy, explainScaspDecisions, scaspUnchangedSkip);
+        client.enabled = true;
+        AiDiagnostics.Log($"{agent.AgentId}: strategy ScaspStrategy ({scaspPolicy} policy) via {client.ServerUrl}", npc);
+        return strategy;
     }
 
     // A periodic one-block summary instead of a log line per decision.
