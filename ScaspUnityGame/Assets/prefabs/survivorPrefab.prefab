@@ -274,6 +274,9 @@ MonoBehaviour:
   stratName: 
   health: 3
   role: innocent
+  statName: 
+  InfectedSprite: {fileID: -1355109095494384428, guid: 9ae4f7f9c54e7f2449dde98a1287b810, type: 3}
+  DeadSprite: {fileID: 4748913868836609916, guid: 69317ffaa29bfe84e857fc5eec99223d, type: 3}
 --- !u!114 &4180092995283551806
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -292,6 +295,7 @@ MonoBehaviour:
   leaveBarricadeDistance: 2
   detectionRange: 5
   biteAttemptCooldown: 1
+  knockbackTime: 0
   detectedObjects: []
   transientQueryCount: 0
   lastTransientQueryTime: -1
@@ -310,6 +314,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ScaspStrategy
   client: {fileID: 2728016071441532600}
   actorId: player1
+  leversToWin: 3
   requestTimeout: 35
   policy: 1
   explainDecisions: 0
