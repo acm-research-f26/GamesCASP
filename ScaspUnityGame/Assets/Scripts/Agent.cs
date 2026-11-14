@@ -30,6 +30,8 @@ public class Agent : Agent_Parent_Script
     public float BiteWindowStartedAt => biteWindowStartedAt;
     public bool BiteWindowExpired => isHalfZombie && Time.time >= biteWindowStartedAt + BiteWindowSeconds;
 
+    private bool isDead;
+
     // This will let us know when the bite window is in its last few seconds
     // Same check as critical_bite_stage in the Prolog rules, start + window - critical <= now < start + window
     public bool InCriticalBiteStage => isHalfZombie && !BiteWindowExpired &&
@@ -40,12 +42,16 @@ public class Agent : Agent_Parent_Script
     public event System.Action<Agent> BecameHalfZombie;
     public string statName;
 
+    public Sprite InfectedSprite;
+    public Sprite DeadSprite;
+
     // Initialize this NPC with its role and starting position.
     public void Initialize(string agentRole, float startPosX, float startPosY)
     {
         health = 3;
         role = agentRole;
         isHalfZombie = false;
+        isDead = false;
         biteWindowStartedAt = 0f;
 
         transform.position = new Vector3(
@@ -66,11 +72,21 @@ public class Agent : Agent_Parent_Script
         if (isHalfZombie || health <= 0)
             return false;
 
+        GetComponent<SpriteRenderer>().sprite = InfectedSprite;
+        
         isHalfZombie = true;
         biteWindowStartedAt = Time.time;
         // Let anyone listening know the infection happened
         BecameHalfZombie?.Invoke(this);
         return true;
+    }
+
+    void Update()
+    {
+        if(BiteWindowExpired && !isDead)
+        {
+            SetDead();
+        }
     }
 
     // Gameplay calls this only after confirming a successful bite before the window expired.
@@ -95,21 +111,30 @@ public class Agent : Agent_Parent_Script
         base.ExecuteAction(action, target);
     }
 
+    public void SetDead()
+    {
+        isDead = true;
+
+
+        foreach (SpriteRenderer sprite in GetComponentsInChildren<SpriteRenderer>())
+        {
+            /*Color color = sprite.color;
+            color.a = 0.5f;
+            sprite.color = color;*/
+            sprite.sprite = DeadSprite;
+        }
+        AiAction movement = GetComponent<AiAction>();
+
+        if (movement != null) movement.enabled = false;
+    }
+
     // Update the NPC's health.
     public void SetHealth(int newHealth)
     {
         health = Mathf.Max(0, newHealth);
-        if (health == 0)
+        if (health < 0 && !isDead)
         {
-            foreach (SpriteRenderer sprite in GetComponentsInChildren<SpriteRenderer>())
-            {
-                Color color = sprite.color;
-                color.a = 0.5f;
-                sprite.color = color;
-            }
-            AiAction movement = GetComponent<AiAction>();
-
-            if (movement != null) movement.enabled = false;
+            SetDead();
         }
 
 
