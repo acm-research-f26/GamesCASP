@@ -32,6 +32,9 @@ public class PlayerManager : MonoBehaviour
     private bool gameStarted;
     private string actorIdPrefix = "";
 
+    public GameObject winScreen;
+    public GameObject loseScreen;
+
     public void ConfigureExperiment(int count, NpcDecisionBackend backend, ScaspPolicy policy, string identityPrefix)
     {
         if (gameStarted) throw new System.InvalidOperationException("Configure before starting the game.");
@@ -480,6 +483,16 @@ public class PlayerManager : MonoBehaviour
         client.enabled = true;
         AiDiagnostics.Log($"{agent.AgentId}: strategy ScaspStrategy ({scaspPolicy} policy) via {client.ServerUrl}", npc);
         return strategy;
+    }
+
+    void Update()
+    {
+        bool survivor = players.Exists(agent => agent != null && agent.isActiveAndEnabled &&
+            agent.Health > 0 && !agent.BiteWindowExpired);
+        if(!survivor && !winScreen.activeInHierarchy && players.Count > 0)
+        {
+            loseScreen.SetActive(true);
+        }
     }
 
     // A periodic one-block summary instead of a log line per decision.
